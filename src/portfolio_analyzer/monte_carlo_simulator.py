@@ -95,18 +95,14 @@ class MonteCarloSimulator:
         compounded_returns = np.cumprod(1 + portfolio_returns, axis=0)
         return self.mc_config.initial_value * compounded_returns
 
-    def _calculate_statistics(
-        self, sim_paths: np.ndarray
-    ) -> Tuple[Dict[str, float], np.ndarray]:
+    def _calculate_statistics(self, sim_paths: np.ndarray) -> Tuple[Dict[str, float], np.ndarray]:
         final_values = sim_paths[-1, :]
         stats = {
             "mean": np.mean(final_values),
             "median": np.median(final_values),
             "std_dev": np.std(final_values),
             "var_95": np.percentile(final_values, 5),
-            "cvar_95": np.mean(
-                final_values[final_values <= np.percentile(final_values, 5)]
-            ),
+            "cvar_95": np.mean(final_values[final_values <= np.percentile(final_values, 5)]),
             "prob_breakeven": np.mean(final_values > self.mc_config.initial_value),
         }
         return stats, final_values

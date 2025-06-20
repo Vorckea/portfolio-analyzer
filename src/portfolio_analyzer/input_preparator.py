@@ -46,9 +46,7 @@ def prepare_model_inputs(config: AppConfig) -> ModelInputs:
 
     # 2. **CRITICAL**: Define the final list of tickers based on successful price data.
     final_tickers_list = close_df.columns.tolist()
-    print(
-        f"\nProceeding with {len(final_tickers_list)} tickers that have valid price data."
-    )
+    print(f"\nProceeding with {len(final_tickers_list)} tickers that have valid price data.")
 
     # 3. Filter and re-normalize market cap weights to match the final tickers
     w_mkt = pd.Series(dtype=float)
@@ -138,9 +136,7 @@ def _prepare_optimization_inputs(
         aligned_view_tickers = [t for t in view_tickers if t in log_returns.columns]
         if aligned_view_tickers:
             Q_views = pd.Series({t: dcf_views[t] for t in aligned_view_tickers})
-            P_views = pd.DataFrame(
-                0.0, index=Q_views.index, columns=log_returns.columns
-            )
+            P_views = pd.DataFrame(0.0, index=Q_views.index, columns=log_returns.columns)
             for ticker in Q_views.index:
                 P_views.loc[ticker, ticker] = 1.0
             view_cov = P_views @ cov_matrix_annualized @ P_views.T
@@ -170,13 +166,9 @@ def _prepare_optimization_inputs(
                 print("Successfully applied Black-Litterman model with views.")
                 final_mean_returns = posterior_returns
             else:
-                print(
-                    "No valid views; blending historical and implied equilibrium returns."
-                )
+                print("No valid views; blending historical and implied equilibrium returns.")
                 w_blend = config.black_litterman.equilibrium_blend_weight
-                common_idx = hist_mean_returns.index.intersection(
-                    implied_equilibrium_returns.index
-                )
+                common_idx = hist_mean_returns.index.intersection(implied_equilibrium_returns.index)
                 final_mean_returns = (
                     w_blend * implied_equilibrium_returns.loc[common_idx]
                     + (1 - w_blend) * hist_mean_returns.loc[common_idx]
@@ -185,9 +177,7 @@ def _prepare_optimization_inputs(
             assets_no_mkt_cap = w_mkt[w_mkt <= 1e-9].index
             common_no_cap = assets_no_mkt_cap.intersection(final_mean_returns.index)
             if not common_no_cap.empty:
-                final_mean_returns.update(
-                    implied_equilibrium_returns.loc[common_no_cap]
-                )
+                final_mean_returns.update(implied_equilibrium_returns.loc[common_no_cap])
         except Exception as e:
             print(f"Black-Litterman model failed: {e}. Using historical returns.")
             final_mean_returns = hist_mean_returns
@@ -195,10 +185,7 @@ def _prepare_optimization_inputs(
         final_mean_returns = hist_mean_returns
 
     # **IMPROVEMENT**: Blend the final BL/Equilibrium returns with historical momentum.
-    if (
-        config.black_litterman.momentum_blend_weight > 0
-        and implied_equilibrium_returns is not None
-    ):
+    if config.black_litterman.momentum_blend_weight > 0 and implied_equilibrium_returns is not None:
         print(
             f"\nBlending final returns with {config.black_litterman.momentum_blend_weight:.0%} momentum."
         )
@@ -208,8 +195,7 @@ def _prepare_optimization_inputs(
         hist_mean_returns_aligned = hist_mean_returns.loc[common_idx]
 
         final_mean_returns = (
-            (1 - config.black_litterman.momentum_blend_weight)
-            * final_mean_returns_aligned
+            (1 - config.black_litterman.momentum_blend_weight) * final_mean_returns_aligned
             + config.black_litterman.momentum_blend_weight * hist_mean_returns_aligned
         )
 

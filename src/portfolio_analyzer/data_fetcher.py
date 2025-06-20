@@ -6,9 +6,7 @@ from portfolio_analyzer.dcf_calculator import DCFCalculator
 
 
 def fetch_price_data(tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
-    """
-    Fetches historical adjusted close prices from yfinance, skipping any that fail.
-    """
+    """Fetches historical adjusted close prices from yfinance, skipping any that fail."""
     print("Fetching historical price data from yfinance...")
     # Use yfinance's built-in grouping for efficiency
     data = yf.download(tickers, start=start_date, end=end_date, progress=False, auto_adjust=True)
@@ -31,9 +29,7 @@ def fetch_price_data(tickers: list[str], start_date: str, end_date: str) -> pd.D
 
 
 def calculate_dcf_views(config: AppConfig) -> dict[str, float]:
-    """
-    Calculates DCF-based views for a list of tickers.
-    """
+    """Calculates DCF-based views for a list of tickers."""
     print("\nCalculating DCF-based views...")
     views = {}
     for ticker in config.tickers:

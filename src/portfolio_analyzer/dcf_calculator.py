@@ -5,9 +5,7 @@ from portfolio_analyzer.config import DCFConfig
 
 
 class DCFCalculator:
-    """
-    An advanced, adaptive 3-stage DCF model with improved validation and logging.
-    """
+    """An advanced, adaptive 3-stage DCF model with improved validation and logging."""
 
     def __init__(self, ticker_symbol: str, config: DCFConfig, risk_free_rate: float):
         self.ticker_symbol = ticker_symbol
@@ -17,9 +15,7 @@ class DCFCalculator:
         self._data = {}
 
     def _fetch_data(self) -> bool:
-        """
-        Fetches and validates required data, printing the specific reason for skipping.
-        """
+        """Fetches and validates required data, printing the specific reason for skipping."""
         try:
             info = self.ticker.info
 
@@ -83,16 +79,12 @@ class DCFCalculator:
         """Determines the growth rate for Stage 1."""
         analyst_growth = self._data.get("analyst_growth_estimate")
         if analyst_growth and isinstance(analyst_growth, (int, float)):
-            return np.clip(
-                analyst_growth, self.config.min_growth_rate, self.config.max_growth_rate
-            )
+            return np.clip(analyst_growth, self.config.min_growth_rate, self.config.max_growth_rate)
         return self.config.fallback_growth_rate
 
     def _calculate_wacc(self) -> float:
         """Calculates the Weighted Average Cost of Capital (WACC)."""
-        cost_of_equity = (
-            self.risk_free_rate + self._data["beta"] * self.config.market_risk_premium
-        )
+        cost_of_equity = self.risk_free_rate + self._data["beta"] * self.config.market_risk_premium
         equity_value = self._data["mkt_cap"]
         debt_value = self._data["total_debt"]
         total_value = equity_value + debt_value

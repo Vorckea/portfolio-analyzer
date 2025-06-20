@@ -7,9 +7,7 @@ from typing import List
 @dataclass
 class DataRangeConfig:
     end: datetime = field(default_factory=lambda: datetime.today())
-    start: datetime = field(
-        default_factory=lambda: datetime.today() - timedelta(days=5 * 365)
-    )
+    start: datetime = field(default_factory=lambda: datetime.today() - timedelta(days=5 * 365))
 
 
 @dataclass

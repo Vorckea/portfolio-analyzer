@@ -46,9 +46,7 @@ def plot_correlation_heatmap(correlation_matrix: pd.DataFrame) -> None:
             figsize=figsize,
             annot_kws={"size": annot_size},
         )
-        g.ax_heatmap.set_title(
-            "Clustered Asset Correlation Matrix", fontsize=16, fontweight="bold"
-        )
+        g.ax_heatmap.set_title("Clustered Asset Correlation Matrix", fontsize=16, fontweight="bold")
         plt.setp(g.ax_heatmap.get_xticklabels(), rotation=45, ha="right", fontsize=10)
         plt.setp(g.ax_heatmap.get_yticklabels(), rotation=0, fontsize=10)
         plt.show()
@@ -79,9 +77,7 @@ def plot_correlation_network(
 
     # --- Filter Edges based on threshold ---
     edges_to_remove = [
-        (u, v)
-        for u, v, data in G.edges(data=True)
-        if abs(data.get("weight", 0)) < threshold
+        (u, v) for u, v, data in G.edges(data=True) if abs(data.get("weight", 0)) < threshold
     ]
     G.remove_edges_from(edges_to_remove)
 
@@ -116,14 +112,10 @@ def plot_correlation_network(
             else [2.5] * len(edge_weights)
         )
 
-        nx.draw_networkx_edges(
-            G, pos, width=edge_widths, edge_color=edge_colors, alpha=0.7, ax=ax
-        )
+        nx.draw_networkx_edges(G, pos, width=edge_widths, edge_color=edge_colors, alpha=0.7, ax=ax)
 
         legend_elements = [
-            plt.Line2D(
-                [0], [0], color="g", lw=2, label=f"Positive Correlation (> {threshold})"
-            ),
+            plt.Line2D([0], [0], color="g", lw=2, label=f"Positive Correlation (> {threshold})"),
             plt.Line2D(
                 [0],
                 [0],
@@ -157,9 +149,7 @@ def display_optimization_summary(result: PortfolioResult) -> None:
     print("\n--- Optimization Results ---\n")
     print("Optimal Weights:")
     if result.opt_weights is not None and not result.opt_weights.empty:
-        for ticker_item, weight_item in result.opt_weights.sort_values(
-            ascending=False
-        ).items():
+        for ticker_item, weight_item in result.opt_weights.sort_values(ascending=False).items():
             print(f"\t{ticker_item}: {weight_item:.2%}")
         print(f"\tTotal Sum: {result.opt_weights.sum():.4f}")
     else:

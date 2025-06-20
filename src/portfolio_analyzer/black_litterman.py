@@ -38,9 +38,7 @@ class BlackLittermanModel:
         """Robustly aligns all inputs to a common set of tickers and views."""
         asset_universe = cov_matrix.index.intersection(w_mkt.index).sort_values()
         if asset_universe.empty:
-            raise ValueError(
-                "No common tickers between market weights and covariance matrix."
-            )
+            raise ValueError("No common tickers between market weights and covariance matrix.")
 
         S = cov_matrix.loc[asset_universe, asset_universe]
         w = w_mkt.loc[asset_universe]
@@ -50,9 +48,7 @@ class BlackLittermanModel:
             return asset_universe.tolist(), S, w, None, None, None
 
         P_aligned_cols = P.reindex(columns=asset_universe, fill_value=0.0)
-        common_views = P_aligned_cols.index.intersection(Q.index).intersection(
-            Omega.index
-        )
+        common_views = P_aligned_cols.index.intersection(Q.index).intersection(Omega.index)
 
         P_final = P_aligned_cols.loc[common_views]
         Q_final = Q.loc[common_views]
@@ -69,18 +65,13 @@ class BlackLittermanModel:
         return pi
 
     def get_posterior_returns(self) -> Optional[pd.Series]:
-        """
-        Calculates the posterior returns using a numerically stable approach.
+        """Calculates the posterior returns using a numerically stable approach.
         Converts all pandas objects to numpy arrays before calculation to avoid
         implicit alignment errors.
         """
         pi_series = self.get_implied_equilibrium_returns()
 
-        if (
-            self.aligned_P is None
-            or self.aligned_Q is None
-            or self.aligned_Omega is None
-        ):
+        if self.aligned_P is None or self.aligned_Q is None or self.aligned_Omega is None:
             return None
 
         # --- Convert all pandas objects to numpy arrays for calculation ---

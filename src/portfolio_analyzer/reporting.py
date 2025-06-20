@@ -6,7 +6,8 @@ from portfolio_analyzer.portfolio_optimizer import PortfolioResult
 
 def display_optimization_summary_html(result: PortfolioResult) -> None:
     """Displays a styled HTML summary of the optimization results with a two-column
-    layout for weights."""
+    layout for weights.
+    """
     if not result or not result.success:
         html = """
         <div style="display: flex; justify-content: flex-start;">
@@ -55,7 +56,9 @@ def display_optimization_summary_html(result: PortfolioResult) -> None:
         # by nth-last-child.
         # This ensures the very last item never has a bottom border.
         if len(sorted_weights) % 2 != 0:
-            weights_html = weights_html.replace("<li><span", '<li style="border-bottom: none;"><span', 1)
+            weights_html = weights_html.replace(
+                "<li><span", '<li style="border-bottom: none;"><span', 1
+            )
 
     else:
         weights_html = "<li>No assets in the final portfolio.</li>"

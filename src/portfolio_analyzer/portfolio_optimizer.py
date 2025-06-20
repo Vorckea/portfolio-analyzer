@@ -28,9 +28,7 @@ def _standard_deviations(weights: np.ndarray, cov_matrix: np.ndarray) -> float:
     return np.sqrt(variance)
 
 
-def _expected_returns(
-    weights: np.ndarray, annualized_mean_returns_vector: np.ndarray
-) -> float:
+def _expected_returns(weights: np.ndarray, annualized_mean_returns_vector: np.ndarray) -> float:
     return np.sum(annualized_mean_returns_vector * weights)
 
 
@@ -57,9 +55,7 @@ def _neg_sharpe_ratio_L2(
     risk_free_rate: float,
     lambda_reg: float,
 ) -> float:
-    s_ratio = _sharpe_ratio(
-        weights, annualized_mean_returns_vector, cov_matrix, risk_free_rate
-    )
+    s_ratio = _sharpe_ratio(weights, annualized_mean_returns_vector, cov_matrix, risk_free_rate)
     l2_penalty = lambda_reg * np.sum(weights**2)
     return -s_ratio + l2_penalty
 
@@ -72,13 +68,9 @@ class PortfolioOptimizer:
         config: AppConfig,
     ):
         if not mean_returns.index.equals(cov_matrix.index):
-            common_tickers = sorted(
-                list(set(mean_returns.index) & set(cov_matrix.index))
-            )
+            common_tickers = sorted(list(set(mean_returns.index) & set(cov_matrix.index)))
             if not common_tickers:
-                raise ValueError(
-                    "Mean returns and covariance matrix have no common tickers."
-                )
+                raise ValueError("Mean returns and covariance matrix have no common tickers.")
 
             self.mean_returns = mean_returns.loc[common_tickers]
             self.cov_matrix = cov_matrix.loc[common_tickers, common_tickers]
@@ -105,9 +97,7 @@ class PortfolioOptimizer:
             return PortfolioResult(success=False)
 
         constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
-        bounds = tuple(
-            (0, self.config.optimization.max_weight_per_asset) for _ in range(num_asset)
-        )
+        bounds = tuple((0, self.config.optimization.max_weight_per_asset) for _ in range(num_asset))
         initial_weights = np.array([1.0 / num_asset] * num_asset)
 
         opt_result = minimize(
@@ -129,9 +119,7 @@ class PortfolioOptimizer:
 
         # Create a Series to easily filter both weights and tickers
         final_weights = pd.Series(opt_result.x, index=self.tickers)
-        final_weights = final_weights[
-            final_weights > self.config.optimization.min_weight_per_asset
-        ]
+        final_weights = final_weights[final_weights > self.config.optimization.min_weight_per_asset]
 
         if final_weights.empty:
             return PortfolioResult(success=False)
@@ -141,17 +129,11 @@ class PortfolioOptimizer:
 
         # Filter the model inputs to match the final assets
         mean_returns_filtered = self.mean_returns.loc[final_weights.index]
-        cov_matrix_filtered = self.cov_matrix.loc[
-            final_weights.index, final_weights.index
-        ]
+        cov_matrix_filtered = self.cov_matrix.loc[final_weights.index, final_weights.index]
 
         # Recalculate final portfolio metrics
-        portfolio_return_log = _expected_returns(
-            final_weights.values, mean_returns_filtered.values
-        )
-        portfolio_std_dev = _standard_deviations(
-            final_weights.values, cov_matrix_filtered.values
-        )
+        portfolio_return_log = _expected_returns(final_weights.values, mean_returns_filtered.values)
+        portfolio_std_dev = _standard_deviations(final_weights.values, cov_matrix_filtered.values)
         portfolio_sharpe_log = _sharpe_ratio(
             final_weights.values,
             mean_returns_filtered.values,
