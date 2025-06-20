@@ -1,3 +1,5 @@
+from typing import Optional
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -322,6 +324,69 @@ def plot_simulation_paths(result: SimulationResult, ax: plt.Axes = None):
     ax.yaxis.set_major_formatter(FuncFormatter(lambda y, p: f"{y:,.0f}"))
     ax.grid(True, which="major", linestyle="--", linewidth=0.5)
     ax.legend()
+    if "fig" in locals():
+        plt.tight_layout()
+        plt.show()
+        plt.close(fig)
+
+
+def plot_efficient_frontier(
+    frontier_df: pd.DataFrame,
+    max_sharpe_result: PortfolioResult,
+    min_vol_result: PortfolioResult,
+    current_opt_result: Optional[PortfolioResult] = None,
+    ax: plt.Axes = None,
+) -> None:
+    """Plots the efficient frontier with key portfolios highlighted."""
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(12, 8))
+
+    # Plot the frontier
+    ax.plot(
+        frontier_df["Volatility"],
+        frontier_df["Return"],
+        "b--",
+        linewidth=2,
+        label="Efficient Frontier",
+    )
+
+    # Plot Max Sharpe Portfolio
+    ax.plot(
+        max_sharpe_result.std_dev,
+        max_sharpe_result.arithmetic_return,
+        "r*",
+        markersize=15,
+        label=f"Max Sharpe (SR: {max_sharpe_result.display_sharpe:.2f})",
+    )
+
+    # Plot Min Volatility Portfolio
+    ax.plot(
+        min_vol_result.std_dev,
+        min_vol_result.arithmetic_return,
+        "g*",
+        markersize=15,
+        label=f"Min Volatility (Vol: {min_vol_result.std_dev:.2%})",
+    )
+
+    # Plot the user's currently optimized portfolio if available
+    if current_opt_result and current_opt_result.success:
+        ax.plot(
+            current_opt_result.std_dev,
+            current_opt_result.arithmetic_return,
+            "y*",  # Yellow star
+            markersize=15,
+            label=f"Current Optimized (SR: {current_opt_result.display_sharpe:.2f})",
+        )
+
+    # Formatting
+    ax.set_title("Efficient Frontier Analysis", fontsize=18, fontweight="bold")
+    ax.set_xlabel("Volatility (Annualized Std. Dev)", fontsize=12)
+    ax.set_ylabel("Expected Return (Annualized)", fontsize=12)
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, p: f"{y:.1%}"))
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: f"{x:.1%}"))
+    ax.legend(loc="best", fontsize=11)
+    ax.grid(True, linestyle="--", alpha=0.6)
+
     if "fig" in locals():
         plt.tight_layout()
         plt.show()

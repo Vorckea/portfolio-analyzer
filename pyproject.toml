@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "portfolio-analyzer"
-version = "0.0.1"
+version = "0.1.0"
 description = ""
 authors = ["Vorckea <akselschrader@gmail.com>"]
 readme = "README.md"
