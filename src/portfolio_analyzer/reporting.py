@@ -1,13 +1,11 @@
-from IPython.display import HTML, display
+from IPython.display import HTML
 
 from portfolio_analyzer.monte_carlo_simulator import SimulationResult
 from portfolio_analyzer.portfolio_optimizer import PortfolioResult
 
 
-def display_optimization_summary_html(result: PortfolioResult) -> None:
-    """Displays a styled HTML summary of the optimization results with a two-column
-    layout for weights.
-    """
+def display_optimization_summary_html(result: PortfolioResult) -> HTML:
+    """Return a styled HTML summary of the optimization results."""
     if not result or not result.success:
         html = """
         <div style="display: flex; justify-content: flex-start;">
@@ -16,8 +14,7 @@ def display_optimization_summary_html(result: PortfolioResult) -> None:
             </div>
         </div>
         """  # noqa: E501
-        display(HTML(html))
-        return
+        return HTML(html)
 
     style = """
     <style>
@@ -78,11 +75,11 @@ def display_optimization_summary_html(result: PortfolioResult) -> None:
         </div>
     </div>
     """  # noqa: E501
-    display(HTML(html))
+    return HTML(html)
 
 
-def display_simulation_summary_html(result: SimulationResult) -> None:
-    """Displays a cleaner, left-aligned HTML summary of the simulation results."""
+def display_simulation_summary_html(result: SimulationResult) -> HTML:
+    """Return a cleaner, left-aligned HTML summary of the simulation results."""
     stats = result.stats
     dist_name = result.dist_model_name
     title = f"Monte Carlo Simulation ({dist_name})"
@@ -182,4 +179,4 @@ def display_simulation_summary_html(result: SimulationResult) -> None:
         </div>
     </div>
     """  # noqa: E501
-    display(HTML(html))
+    return HTML(html)

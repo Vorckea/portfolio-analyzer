@@ -50,6 +50,7 @@ def plot_correlation_heatmap(correlation_matrix: pd.DataFrame) -> None:
         plt.setp(g.ax_heatmap.get_xticklabels(), rotation=45, ha="right", fontsize=10)
         plt.setp(g.ax_heatmap.get_yticklabels(), rotation=0, fontsize=10)
         plt.show()
+        plt.close(g.fig)
     except Exception as e:
         print(f"Could not generate clustermap: {e}")
 
@@ -138,6 +139,7 @@ def plot_correlation_network(
     if "fig" in locals():
         plt.tight_layout()
         plt.show()
+        plt.close(fig)
 
 
 def display_optimization_summary(result: PortfolioResult) -> None:
@@ -232,6 +234,7 @@ def plot_optimal_weights(
     if "fig" in locals():
         plt.tight_layout()
         plt.show()
+        plt.close(fig)
 
 
 def display_simulation_summary(result: SimulationResult) -> None:
@@ -289,6 +292,7 @@ def plot_simulation_distribution(result: SimulationResult, ax: plt.Axes = None):
     if "fig" in locals():
         plt.tight_layout()
         plt.show()
+        plt.close(fig)
 
 
 def plot_simulation_paths(result: SimulationResult, ax: plt.Axes = None):
@@ -321,3 +325,4 @@ def plot_simulation_paths(result: SimulationResult, ax: plt.Axes = None):
     if "fig" in locals():
         plt.tight_layout()
         plt.show()
+        plt.close(fig)
