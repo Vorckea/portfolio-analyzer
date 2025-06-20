@@ -1,7 +1,7 @@
 import numpy as np
 import yfinance as yf
 
-from finance_project.config import DCFConfig
+from portfolio_analyzer.config import DCFConfig
 
 
 class DCFCalculator:

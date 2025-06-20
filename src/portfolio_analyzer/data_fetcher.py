@@ -1,29 +1,23 @@
 import pandas as pd
 import yfinance as yf
 
-from finance_project.config import AppConfig
-from finance_project.dcf_calculator import DCFCalculator
+from portfolio_analyzer.config import AppConfig
+from portfolio_analyzer.dcf_calculator import DCFCalculator
 
 
-def fetch_price_data(
-    tickers: list[str], start_date: str, end_date: str
-) -> pd.DataFrame:
+def fetch_price_data(tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
     """
     Fetches historical adjusted close prices from yfinance, skipping any that fail.
     """
     print("Fetching historical price data from yfinance...")
     # Use yfinance's built-in grouping for efficiency
-    data = yf.download(
-        tickers, start=start_date, end=end_date, progress=False, auto_adjust=True
-    )
+    data = yf.download(tickers, start=start_date, end=end_date, progress=False, auto_adjust=True)
 
     if data.empty:
         raise ValueError("No price data fetched for any tickers.")
 
     # Handle multi-level columns if multiple tickers are downloaded
-    close_df = (
-        data["Close"] if isinstance(data.columns, pd.MultiIndex) else data[["Close"]]
-    )
+    close_df = data["Close"] if isinstance(data.columns, pd.MultiIndex) else data[["Close"]]
 
     # Drop tickers that failed to download (all NaN columns)
     close_df = close_df.dropna(axis=1, how="all")

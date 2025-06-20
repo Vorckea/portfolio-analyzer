@@ -4,8 +4,8 @@ from typing import Dict, Tuple
 import numpy as np
 from scipy.stats import multivariate_normal, multivariate_t
 
-from finance_project.config import AppConfig
-from finance_project.portfolio_optimizer import PortfolioResult
+from portfolio_analyzer.config import AppConfig
+from portfolio_analyzer.portfolio_optimizer import PortfolioResult
 
 
 @dataclass

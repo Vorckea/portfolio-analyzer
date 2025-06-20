@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
-from finance_project.config import AppConfig
+from portfolio_analyzer.config import AppConfig
 
 
 @dataclass

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "finance-project"
+name = "portfolio-analyzer"
 version = "0.0.1"
 description = ""
 authors = ["Vorckea <akselschrader@gmail.com>"]

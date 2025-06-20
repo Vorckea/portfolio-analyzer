@@ -18,3 +18,6 @@ poetry.lock
 
 # Jupyter
 .ipynb_checkpoints
+
+# Ruff
+.ruff_cache/
