@@ -66,7 +66,7 @@ class BlackLittermanConfig:
     equilibrium_blend_weight: float = 0.5
     # **NEW**: How much weight to give to historical momentum vs. BL valuation.
     # 0.0 = Pure Black-Litterman, 1.0 = Pure Historical Momentum.
-    momentum_blend_weight: float = 0.2
+    momentum_blend_weight: float = 0.3
 
 
 class DistributionModel(Enum):

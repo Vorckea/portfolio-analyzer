@@ -90,7 +90,7 @@ class PortfolioOptimizer:
             self.tickers = list(mean_returns.index)
 
         self.config = config
-        self.latest_result: Optional[PortfolioResult] = None
+        # self.latest_result: Optional[PortfolioResult] = None
 
     def _create_result_from_weights(self, weights: np.ndarray) -> PortfolioResult:
         """Helper to create a PortfolioResult object from a given set of weights."""
@@ -129,9 +129,8 @@ class PortfolioOptimizer:
         )
 
     def optimize(self, lambda_reg: float) -> Optional[PortfolioResult]:
-        """Performs the core portfolio optimization and stores the result."""
-        self.latest_result = self._perform_core_optimization(lambda_val=lambda_reg)
-        return self.latest_result
+        """Perform the core portfolio optimization and stores the result."""
+        return self._perform_core_optimization(lambda_val=lambda_reg)
 
     def _perform_core_optimization(self, lambda_val: float) -> PortfolioResult:
         num_asset = len(self.tickers)
