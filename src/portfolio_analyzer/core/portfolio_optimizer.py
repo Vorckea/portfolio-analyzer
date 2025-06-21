@@ -189,22 +189,29 @@ class PortfolioOptimizer:
             raise RuntimeError("Could not find the minimum volatility portfolio.")
         min_vol_result = self._create_result_from_weights(min_vol_opt.x)
 
-        # 2. Determine range of returns for the frontier (using log returns for optimization)
+        # 2. Find the Max Sharpe Ratio portfolio directly using the optimizer
+        # We use lambda_reg=0 to find the theoretical max Sharpe on the frontier
+        max_sharpe_result = self.optimize(lambda_reg=0.0)
+        if not max_sharpe_result or not max_sharpe_result.success:
+            raise RuntimeError("Could not find the maximum Sharpe ratio portfolio.")
+
+        # 3. Determine range of returns for the frontier plot
         min_return_log = min_vol_result.log_return
-        max_return_log = self.mean_returns.max()
+        # Use the higher of the max sharpe or max individual asset return for the range
+        max_return_log = max(max_sharpe_result.log_return, self.mean_returns.max())
         target_log_returns = np.linspace(min_return_log, max_return_log, num_points)
 
-        # 3. Calculate frontier points by minimizing volatility for each target return
+        # 4. Calculate frontier points by minimizing volatility for each target return
         frontier_portfolios = []
-        for target in target_log_returns:
+        for target_return in target_log_returns:
             constraints = [
                 {"type": "eq", "fun": lambda w: np.sum(w) - 1},
                 {
                     "type": "eq",
-                    "fun": lambda w: _expected_returns(w, self.mean_returns.values) - target,
+                    "fun": lambda w: _expected_returns(w, self.mean_returns.values) - target_return,
                 },
             ]
-            opt_result = minimize(
+            opt = minimize(
                 _standard_deviations,
                 initial_weights,
                 args=(self.cov_matrix.values,),
@@ -212,28 +219,16 @@ class PortfolioOptimizer:
                 bounds=bounds,
                 constraints=constraints,
             )
-            if opt_result.success:
-                volatility = opt_result.fun
-                arithmetic_return = np.exp(target) - 1
-                frontier_portfolios.append(
-                    {
-                        "Return": arithmetic_return,
-                        "Volatility": volatility,
-                        "weights": opt_result.x,
-                    }
-                )
+            if opt.success:
+                frontier_portfolios.append({"Return": target_return, "Volatility": opt.fun})
 
         if not frontier_portfolios:
             raise RuntimeError("Could not calculate any frontier points.")
 
         frontier_df = pd.DataFrame(frontier_portfolios)
-
-        # 4. Calculate Sharpe for each point and find the max
-        frontier_df["Sharpe"] = (frontier_df["Return"] - self.config.risk_free_rate) / frontier_df[
+        log_risk_free_rate = np.log(1 + self.config.risk_free_rate)
+        frontier_df["Sharpe"] = (frontier_df["Return"] - log_risk_free_rate) / frontier_df[
             "Volatility"
         ]
-        max_sharpe_idx = frontier_df["Sharpe"].idxmax()
-        max_sharpe_weights = frontier_df.loc[max_sharpe_idx, "weights"]
-        max_sharpe_result = self._create_result_from_weights(max_sharpe_weights)
 
-        return frontier_df.drop(columns="weights"), max_sharpe_result, min_vol_result
+        return frontier_df, max_sharpe_result, min_vol_result

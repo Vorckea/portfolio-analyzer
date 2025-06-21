@@ -1,5 +1,5 @@
-from IPython.display import HTML
 import pandas as pd
+from IPython.display import HTML
 
 from portfolio_analyzer.analysis.monte_carlo_simulator import SimulationResult
 from portfolio_analyzer.core.portfolio_optimizer import PortfolioResult

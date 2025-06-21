@@ -7,14 +7,14 @@ from portfolio_analyzer.analysis.monte_carlo_simulator import MonteCarloSimulato
 from portfolio_analyzer.config import AppConfig
 from portfolio_analyzer.core.portfolio_optimizer import PortfolioOptimizer, PortfolioResult
 from portfolio_analyzer.data import input_preparator as ip
+from portfolio_analyzer.reporting.display import (
+    display_optimization_summary_html,
+    display_simulation_summary_html,
+)
 from portfolio_analyzer.reporting.plotting import (
     plot_optimal_weights,
     plot_simulation_distribution,
     plot_simulation_paths,
-)
-from portfolio_analyzer.reporting.reporting import (
-    display_optimization_summary_html,
-    display_simulation_summary_html,
 )
 
 

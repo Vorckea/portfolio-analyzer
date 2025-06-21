@@ -338,56 +338,74 @@ def plot_efficient_frontier(
     ax: plt.Axes = None,
 ) -> None:
     """Plots the efficient frontier with key portfolios highlighted."""
+    fig = None
     if ax is None:
         fig, ax = plt.subplots(figsize=(12, 8))
 
-    # Plot the frontier
+    # Plot the frontier (Y-axis is log return)
     ax.plot(
         frontier_df["Volatility"],
         frontier_df["Return"],
-        "b--",
+        linestyle="--",
+        color="blue",
         linewidth=2,
         label="Efficient Frontier",
     )
 
-    # Plot Max Sharpe Portfolio
-    ax.plot(
-        max_sharpe_result.std_dev,
-        max_sharpe_result.arithmetic_return,
-        "r*",
-        markersize=15,
-        label=f"Max Sharpe (SR: {max_sharpe_result.display_sharpe:.2f})",
-    )
+    # --- Highlight Key Portfolios using LOG returns for consistency ---
 
-    # Plot Min Volatility Portfolio
-    ax.plot(
-        min_vol_result.std_dev,
-        min_vol_result.arithmetic_return,
-        "g*",
-        markersize=15,
-        label=f"Min Volatility (Vol: {min_vol_result.std_dev:.2%})",
-    )
-
-    # Plot the user's currently optimized portfolio if available
-    if current_opt_result and current_opt_result.success:
-        ax.plot(
-            current_opt_result.std_dev,
-            current_opt_result.arithmetic_return,
-            "y*",  # Yellow star
-            markersize=15,
-            label=f"Current Optimized (SR: {current_opt_result.display_sharpe:.2f})",
+    # Max Sharpe Ratio Portfolio
+    if max_sharpe_result and max_sharpe_result.success:
+        ax.scatter(
+            max_sharpe_result.std_dev,
+            max_sharpe_result.log_return,  # Use log_return
+            marker="*",
+            color="red",
+            s=250,
+            label=f"Max Sharpe (SR: {max_sharpe_result.display_sharpe:.2f})",
+            zorder=5,
         )
+
+    # Minimum Volatility Portfolio
+    if min_vol_result and min_vol_result.success:
+        ax.scatter(
+            min_vol_result.std_dev,
+            min_vol_result.log_return,  # Use log_return
+            marker="X",
+            color="green",
+            s=200,
+            label=f"Min Volatility (Vol: {min_vol_result.std_dev:.2%})",
+            zorder=5,
+        )
+
+    # Current Interactive/Optimized Portfolio
+    if current_opt_result and current_opt_result.success:
+        is_not_max_sharpe = not np.isclose(
+            current_opt_result.std_dev, max_sharpe_result.std_dev
+        ) or not np.isclose(current_opt_result.log_return, max_sharpe_result.log_return)
+
+        if is_not_max_sharpe:
+            ax.scatter(
+                current_opt_result.std_dev,
+                current_opt_result.log_return,  # Use log_return
+                marker="o",
+                edgecolor="black",
+                color="orange",
+                s=150,
+                label=f"Current Opt (SR: {current_opt_result.display_sharpe:.2f})",
+                zorder=4,
+            )
 
     # Formatting
     ax.set_title("Efficient Frontier Analysis", fontsize=18, fontweight="bold")
     ax.set_xlabel("Volatility (Annualized Std. Dev)", fontsize=12)
-    ax.set_ylabel("Expected Return (Annualized)", fontsize=12)
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, p: f"{y:.1%}"))
-    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: f"{x:.1%}"))
+    ax.set_ylabel("Expected Log Return (Annualized)", fontsize=12)
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, p: f"{y:.2%}"))
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: f"{x:.2%}"))
     ax.legend(loc="best", fontsize=11)
     ax.grid(True, linestyle="--", alpha=0.6)
 
-    if "fig" in locals():
+    if fig:
         plt.tight_layout()
         plt.show()
         plt.close(fig)
