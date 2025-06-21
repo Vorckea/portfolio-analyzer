@@ -1,8 +1,8 @@
 from IPython.display import HTML
 import pandas as pd
 
-from portfolio_analyzer.monte_carlo_simulator import SimulationResult
-from portfolio_analyzer.portfolio_optimizer import PortfolioResult
+from portfolio_analyzer.analysis.monte_carlo_simulator import SimulationResult
+from portfolio_analyzer.core.portfolio_optimizer import PortfolioResult
 
 
 def display_optimization_summary_html(result: PortfolioResult) -> HTML:

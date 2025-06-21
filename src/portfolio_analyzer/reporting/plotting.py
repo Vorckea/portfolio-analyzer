@@ -7,8 +7,8 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
-from portfolio_analyzer.monte_carlo_simulator import SimulationResult
-from portfolio_analyzer.portfolio_optimizer import PortfolioResult
+from portfolio_analyzer.analysis.monte_carlo_simulator import SimulationResult
+from portfolio_analyzer.core.portfolio_optimizer import PortfolioResult
 
 
 def calculate_correlation_matrix(cov_matrix: pd.DataFrame) -> pd.DataFrame:

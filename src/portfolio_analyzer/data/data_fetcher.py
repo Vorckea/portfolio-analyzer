@@ -1,9 +1,10 @@
 import logging
+
 import pandas as pd
 import yfinance as yf
 
 from portfolio_analyzer.config import AppConfig
-from portfolio_analyzer.dcf_calculator import DCFCalculator
+from portfolio_analyzer.data.dcf_calculator import DCFCalculator
 
 logger = logging.getLogger(__name__)
 

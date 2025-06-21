@@ -8,9 +8,9 @@ import numpy as np
 import pandas as pd
 from sklearn.covariance import LedoitWolf
 
-from portfolio_analyzer.black_litterman import BlackLittermanModel
 from portfolio_analyzer.config import AppConfig
-from portfolio_analyzer.data_fetcher import (
+from portfolio_analyzer.core.black_litterman import BlackLittermanModel
+from portfolio_analyzer.data.data_fetcher import (
     calculate_dcf_views,
     fetch_market_caps,
     fetch_price_data,

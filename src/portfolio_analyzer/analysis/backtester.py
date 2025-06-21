@@ -13,10 +13,11 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+from portfolio_analyzer.analysis.metrics import calculate_performance_summary
 from portfolio_analyzer.config import AppConfig
-from portfolio_analyzer.data_fetcher import fetch_price_data
-from portfolio_analyzer.input_preparator import prepare_model_inputs
-from portfolio_analyzer.portfolio_optimizer import PortfolioOptimizer
+from portfolio_analyzer.core.portfolio_optimizer import PortfolioOptimizer
+from portfolio_analyzer.data.data_fetcher import fetch_price_data
+from portfolio_analyzer.data.input_preparator import prepare_model_inputs
 
 logger = logging.getLogger(__name__)
 
@@ -139,8 +140,12 @@ class Backtester:
                 portfolio_values.append((date, current_value))
                 last_weights = weights
 
-            except Exception:
-                logger.exception("Error during backtest on %s. Holding previous state.", date)
+            except (ValueError, RuntimeError) as e:
+                logger.exception(
+                    "Error during backtest period for %s. Holding previous state. Error: %s",
+                    date,
+                    e,
+                )
                 if portfolio_values:
                     portfolio_values.append((date, portfolio_values[-1][1]))
                 continue
@@ -196,79 +201,48 @@ class Backtester:
         """Calculates key performance metrics for the strategy and benchmark."""
         logger.debug("Calculating performance metrics from backtest results.")
         metrics = {"strategy": {}, "benchmark": {}}
-        strategy_metrics = metrics["strategy"]
-        benchmark_metrics = metrics["benchmark"]
-
         periods_per_year = self._get_periods_per_year()
         logger.info("Annualizing metrics using %d periods per year.", periods_per_year)
 
         # --- Strategy Metrics ---
-        portfolio_series = result_df["Portfolio Value"]
-        strategy_metrics["Final Value"] = portfolio_series.iloc[-1]
-        strategy_metrics["Total Return"] = (
-            portfolio_series.iloc[-1] / portfolio_series.iloc[0]
-        ) - 1
-
-        portfolio_returns = portfolio_series.pct_change().dropna()
-        annualized_return = portfolio_returns.mean() * periods_per_year
-        strategy_metrics["Annualized Return"] = annualized_return
-
-        volatility = portfolio_returns.std() * np.sqrt(periods_per_year)
-        strategy_metrics["Annualized Volatility"] = volatility
-
-        sharpe_ratio = (
-            (annualized_return - self.config.risk_free_rate) / volatility
-            if volatility != 0
-            else 0.0
+        strategy_series = result_df["Portfolio Value"]
+        metrics["strategy"] = calculate_performance_summary(
+            strategy_series, self.config.risk_free_rate, periods_per_year
         )
-        strategy_metrics["Sharpe Ratio"] = sharpe_ratio
-
-        peak = portfolio_series.expanding(min_periods=1).max()
-        drawdown = (portfolio_series - peak) / peak
-        strategy_metrics["Max Drawdown"] = drawdown.min()
 
         # --- Benchmark Metrics ---
         if "Benchmark Value" in result_df.columns:
             benchmark_series = result_df["Benchmark Value"].dropna()
-            benchmark_metrics["Final Value"] = benchmark_series.iloc[-1]
-            benchmark_metrics["Total Return"] = (
-                benchmark_series.iloc[-1] / benchmark_series.iloc[0]
-            ) - 1
-
-            benchmark_returns = benchmark_series.pct_change().dropna()
-            bench_annualized_return = benchmark_returns.mean() * periods_per_year
-            benchmark_metrics["Annualized Return"] = bench_annualized_return
-
-            benchmark_volatility = benchmark_returns.std() * np.sqrt(periods_per_year)
-            benchmark_metrics["Annualized Volatility"] = benchmark_volatility
-
-            bench_sharpe_ratio = (
-                (bench_annualized_return - self.config.risk_free_rate) / benchmark_volatility
-                if benchmark_volatility != 0
-                else 0.0
+            metrics["benchmark"] = calculate_performance_summary(
+                benchmark_series, self.config.risk_free_rate, periods_per_year
             )
-            benchmark_metrics["Sharpe Ratio"] = bench_sharpe_ratio
-
-            bench_peak = benchmark_series.expanding(min_periods=1).max()
-            bench_drawdown = (benchmark_series - bench_peak) / bench_peak
-            benchmark_metrics["Max Drawdown"] = bench_drawdown.min()
 
             # --- Relative Metrics (Alpha, Beta) ---
-            aligned_df = pd.concat([portfolio_returns, benchmark_returns], axis=1, join="inner")
-            aligned_df.columns = ["Portfolio", "Benchmark"]
+            if metrics["strategy"] and metrics["benchmark"]:
+                portfolio_returns = strategy_series.pct_change().dropna()
+                benchmark_returns = benchmark_series.pct_change().dropna()
 
-            if len(aligned_df) > 1 and aligned_df["Benchmark"].var() > 0:
-                cov_matrix = aligned_df.cov()
-                beta = cov_matrix.iloc[0, 1] / cov_matrix.iloc[1, 1]
-                strategy_metrics["Beta"] = beta
+                aligned_df = pd.concat([portfolio_returns, benchmark_returns], axis=1, join="inner")
+                aligned_df.columns = ["Portfolio", "Benchmark"]
 
-                alpha = annualized_return - (
-                    self.config.risk_free_rate
-                    + beta * (bench_annualized_return - self.config.risk_free_rate)
-                )
-                strategy_metrics["Alpha"] = alpha
-            else:
-                strategy_metrics["Beta"] = np.nan
-                strategy_metrics["Alpha"] = np.nan
+                if len(aligned_df) > 1 and aligned_df["Benchmark"].var() > 0:
+                    # Retrieve annualized returns from the metrics dict
+                    strat_annualized_return = metrics["strategy"].get("Annualized Return", 0.0)
+                    bench_annualized_return = metrics["benchmark"].get("Annualized Return", 0.0)
+
+                    # Calculate Beta
+                    cov_matrix = aligned_df.cov()
+                    beta = cov_matrix.iloc[0, 1] / cov_matrix.iloc[1, 1]
+                    metrics["strategy"]["Beta"] = beta
+
+                    # Calculate Alpha (Jensen's Alpha)
+                    alpha = strat_annualized_return - (
+                        self.config.risk_free_rate
+                        + beta * (bench_annualized_return - self.config.risk_free_rate)
+                    )
+                    metrics["strategy"]["Alpha"] = alpha
+                else:
+                    metrics["strategy"]["Beta"] = np.nan
+                    metrics["strategy"]["Alpha"] = np.nan
 
         return metrics

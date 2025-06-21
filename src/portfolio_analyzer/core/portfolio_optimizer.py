@@ -95,9 +95,10 @@ class PortfolioOptimizer:
     def _create_result_from_weights(self, weights: np.ndarray) -> PortfolioResult:
         """Helper to create a PortfolioResult object from a given set of weights."""
         final_weights = pd.Series(weights, index=self.tickers)
-        final_weights = final_weights[final_weights > 1e-5]  # Filter out negligible weights
+        final_weights = final_weights[final_weights > self.config.optimization.min_weight_per_asset]
         if final_weights.empty:
             return PortfolioResult(success=False)
+
         final_weights /= final_weights.sum()
 
         mean_returns_filtered = self.mean_returns.loc[final_weights.index]
@@ -158,47 +159,7 @@ class PortfolioOptimizer:
         if not opt_result.success:
             return PortfolioResult(success=False)
 
-        # Create a Series to easily filter both weights and tickers
-        final_weights = pd.Series(opt_result.x, index=self.tickers)
-        final_weights = final_weights[final_weights > self.config.optimization.min_weight_per_asset]
-
-        if final_weights.empty:
-            return PortfolioResult(success=False)
-
-        # Normalize the filtered weights to ensure they sum to 1
-        final_weights /= final_weights.sum()
-
-        # Filter the model inputs to match the final assets
-        mean_returns_filtered = self.mean_returns.loc[final_weights.index]
-        cov_matrix_filtered = self.cov_matrix.loc[final_weights.index, final_weights.index]
-
-        # Recalculate final portfolio metrics
-        portfolio_return_log = _expected_returns(final_weights.values, mean_returns_filtered.values)
-        portfolio_std_dev = _standard_deviations(final_weights.values, cov_matrix_filtered.values)
-        portfolio_sharpe_log = _sharpe_ratio(
-            final_weights.values,
-            mean_returns_filtered.values,
-            cov_matrix_filtered.values,
-            self.config.risk_free_rate,
-        )
-        arithmetic_opt_return = np.exp(portfolio_return_log) - 1
-        display_sharpe = (
-            (arithmetic_opt_return - self.config.risk_free_rate) / portfolio_std_dev
-            if portfolio_std_dev != 0
-            else 0
-        )
-
-        return PortfolioResult(
-            success=True,
-            opt_weights=final_weights,
-            mean_returns=mean_returns_filtered,
-            cov_matrix=cov_matrix_filtered,
-            log_return=portfolio_return_log,
-            std_dev=portfolio_std_dev,
-            sharpe_ratio=portfolio_sharpe_log,
-            arithmetic_return=arithmetic_opt_return,
-            display_sharpe=display_sharpe,
-        )
+        return self._create_result_from_weights(opt_result.x)
 
     def calculate_efficient_frontier(
         self, num_points: int = 100
