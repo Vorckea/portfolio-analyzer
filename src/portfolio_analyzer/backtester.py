@@ -1,3 +1,11 @@
+"""Backtester class for running historical backtests of portfolio optimization strategies.
+
+This class uses the provided configuration to fetch historical price data,
+prepare model inputs, and optimize the portfolio based on the specified strategy.
+It supports rebalancing at specified frequencies and can compare the strategy's performance
+against a benchmark ticker if provided.
+"""
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -9,9 +17,16 @@ from portfolio_analyzer.portfolio_optimizer import PortfolioOptimizer
 
 
 class Backtester:
-    """Runs a historical backtest of portfolio optimization strategy."""
+    """Backtester class for executing portfolio optimization strategies over historical data."""
 
     def __init__(self, config: AppConfig):
+        """Initialize the Backtester with the application configuration.
+
+        Args:
+            config (AppConfig): The application configuration containing all necessary parameters
+            for backtesting, including tickers, date range, and optimization settings.
+
+        """
         self.config = config
         self.strategy_name = "Mean-Variance Optimization"
 

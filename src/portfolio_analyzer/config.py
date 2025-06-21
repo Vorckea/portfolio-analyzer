@@ -6,12 +6,25 @@ from typing import List
 
 @dataclass
 class DataRangeConfig:
+    """Configuration for the date range of historical data.
+
+    This class defines the start and end dates for fetching historical data.
+    It defaults to a 5-year range ending today, but can be customized.
+    """
+
     end: datetime = field(default_factory=lambda: datetime.today())
     start: datetime = field(default_factory=lambda: datetime.today() - timedelta(days=5 * 365))
 
 
 @dataclass
 class OptimizationConfig:
+    """Configuration for portfolio optimization parameters.
+
+    This class defines the parameters used in the optimization process,
+    including regularization, constraints on asset weights, and other
+    optimization-specific settings.
+    """
+
     lambda_reg: float = 1.0
     max_weight_per_asset: float = 0.25
     min_weight_per_asset: float = 1e-4
@@ -19,7 +32,31 @@ class OptimizationConfig:
 
 @dataclass
 class BlackLittermanConfig:
-    """Parameters for the Black-Litterman model."""
+    """Configuration for the Black-Litterman model parameters.
+
+    This class defines the parameters used in the Black-Litterman model,
+    including the delta and tau values, equilibrium blend weight, and
+    momentum blend weight. These parameters control how the model combines
+    market-implied returns with user-defined views and historical momentum.
+    The delta parameter represents the risk aversion coefficient, while tau
+    is a scaling factor for the covariance matrix. The equilibrium blend
+    weight determines how much to blend the market-implied returns when no
+    views are available, and the momentum blend weight controls the balance
+    between historical momentum and Black-Litterman valuation.
+    The momentum blend weight allows for a flexible approach to portfolio
+    construction, enabling users to adjust the influence of historical
+    momentum versus the Black-Litterman valuation in the final portfolio
+    construction.
+
+    Attributes:
+        delta (float): Risk aversion coefficient.
+        tau (float): Scaling factor for the covariance matrix.
+        equilibrium_blend_weight (float): Weight for market-implied returns when no views are
+        available.
+        momentum_blend_weight (float): Weight for historical momentum versus Black-Litterman
+        valuation.
+
+    """
 
     delta: float = 2.5
     tau: float = 0.05
@@ -31,13 +68,43 @@ class BlackLittermanConfig:
 
 
 class DistributionModel(Enum):
+    """Enumeration for distribution models used in Monte Carlo simulations.
+
+    This enum defines the types of distributions that can be used for
+    Monte Carlo simulations in financial modeling. It includes options for
+    normal distribution and Student's T distribution. The choice of
+    distribution can significantly affect the simulation results, especially
+    in the presence of fat tails or skewness in asset returns.
+    It is important to select the appropriate distribution based on the
+    characteristics of the asset returns being modeled, as different
+    distributions can lead to different risk and return profiles in the
+    simulation results.
+
+    Args:
+        Enum (_type_): Enum class for defining distribution models used in Monte Carlo simulations.
+
+    """
+
     NORMAL = "Normal"
     STUDENT_T = "Student's T"
 
 
 @dataclass
 class BacktestingConfig:
-    """Parameters for the historical backtest."""
+    """Configuration for backtesting parameters.
+
+    This class defines the parameters used for backtesting portfolio strategies,
+    including the initial capital, rebalance frequency, and lookback period.
+    The rebalance frequency determines how often the portfolio is rebalanced,
+    while the lookback period specifies how much historical data is used for
+    optimization. These parameters are crucial for evaluating the performance
+    of portfolio strategies over time, allowing for adjustments based on market
+    conditions and historical performance. The initial capital sets the starting
+    amount for the backtest, which is used to calculate returns and portfolio
+    values over the backtesting period. The lookback period is particularly
+    important for strategies that rely on historical data to inform decisions,
+    as it determines the amount of data available for analysis and optimization.
+    """
 
     initial_capital: float = 100000.0
     rebalance_frequency: str = "3M"  # e.g., '1M', '3M', '1Y'
@@ -46,6 +113,14 @@ class BacktestingConfig:
 
 @dataclass
 class MonteCarloConfig:
+    """Configuration for Monte Carlo simulation parameters.
+
+    This class defines the parameters used in Monte Carlo simulations,
+    including the initial value of the portfolio, the number of simulations,
+    the time horizon in years, the type of distribution to use for returns,
+    and the degrees of freedom for the Student's T distribution if selected.
+    """
+
     initial_value: float = 1_000_000
     num_simulations: int = 100_000
     time_horizon_years: int = 1
@@ -55,7 +130,24 @@ class MonteCarloConfig:
 
 @dataclass
 class DCFConfig:
-    """Assumptions for the more advanced 3-stage DCF model."""
+    """Configuration for Discounted Cash Flow (DCF) model parameters.
+
+    This class defines the parameters used in the DCF model, including
+    the high growth phase duration, fallback growth rate, and perpetual
+    growth rate. It also includes assumptions for the Weighted Average Cost
+    of Capital (WACC), such as the market risk premium, effective tax rate,
+    cost of debt, and the minimum required spread between WACC and perpetual
+    growth rate. These parameters are crucial for accurately estimating the
+    present value of future cash flows, which is the core of the DCF valuation
+    method. The high growth phase represents the initial period of rapid
+    growth for a company, while the transition phase allows for a gradual
+    fade to a more stable, perpetual growth rate. The WACC assumptions are
+    essential for discounting future cash flows to their present value,
+    as they reflect the cost of capital used to finance the company's operations.
+    The minimum required spread between WACC and perpetual growth rate is a
+    safeguard to prevent unrealistic terminal values, ensuring that the
+    DCF model remains grounded in reasonable financial assumptions.
+    """
 
     # Stage 1: High Growth Phase
     high_growth_years: int = 5
@@ -86,6 +178,17 @@ class DCFConfig:
 
 @dataclass
 class AppConfig:
+    """Application configuration for the portfolio analyzer.
+
+    This class holds the configuration settings for the portfolio analyzer application,
+    including the list of tickers to analyze, date range for historical data,
+    and various financial model parameters such as optimization settings,
+    Black-Litterman model parameters, Monte Carlo simulation settings, DCF model parameters,
+    and backtesting configurations.
+    It provides a structured way to manage the application's settings and allows for easy
+    customization of the analysis parameters without modifying the core logic of the application.
+    """
+
     tickers: List[str] = field(
         default_factory=lambda: [
             "NORBT.OL",
@@ -122,7 +225,23 @@ class AppConfig:
     backtesting: BacktestingConfig = field(default_factory=BacktestingConfig)
 
     def model_copy(self, deep: bool = True) -> "AppConfig":
-        """Create a deep copy of the configuration model."""
+        """Create a deep copy of the AppConfig instance.
+
+        This method allows for creating a copy of the AppConfig instance,
+        which can be useful for creating temporary configurations for
+        backtesting or simulations without modifying the original configuration.
+        This is particularly useful in scenarios where you want to run
+        multiple simulations or backtests with different parameters while
+        keeping the original configuration intact.
+
+        Args:
+            deep (bool, optional): Whether to create a deep copy of the configuration.
+            If True, a new instance is created with the same parameters. Defaults to True.
+
+        Returns:
+            AppConfig: A new instance of AppConfig with the same parameters.
+
+        """
         from copy import deepcopy
 
         return deepcopy(self) if deep else self.__class__(**self.__dict__)
