@@ -12,6 +12,12 @@ import pandas as pd
 from scipy.optimize import minimize
 
 from portfolio_analyzer.config import AppConfig
+from portfolio_analyzer.core import objectives
+from portfolio_analyzer.core.objectives import (
+    negative_sharpe_ratio,
+    portfolio_return,
+    portfolio_volatility,
+)
 
 
 @dataclass
@@ -27,43 +33,6 @@ class PortfolioResult:
     sharpe_ratio: float = 0.0
     arithmetic_return: float = 0.0
     display_sharpe: float = 0.0
-
-
-def _standard_deviations(weights: np.ndarray, cov_matrix: np.ndarray) -> float:
-    variance = weights.T @ cov_matrix @ weights
-    return np.sqrt(variance)
-
-
-def _expected_returns(weights: np.ndarray, annualized_mean_returns_vector: np.ndarray) -> float:
-    return np.sum(annualized_mean_returns_vector * weights)
-
-
-def _sharpe_ratio(
-    weights: np.ndarray,
-    annualized_mean_returns_vector: np.ndarray,
-    cov_matrix: np.ndarray,
-    risk_free_rate: float,
-) -> float:
-    exp_return = _expected_returns(weights, annualized_mean_returns_vector)
-    std_dev = _standard_deviations(weights, cov_matrix)
-
-    risk_free_rate_log = np.log(1 + risk_free_rate)
-
-    if std_dev == 0:
-        return -np.inf if (exp_return - risk_free_rate) < 0 else np.inf
-    return (exp_return - risk_free_rate_log) / std_dev
-
-
-def _neg_sharpe_ratio_L2(
-    weights: np.ndarray,
-    annualized_mean_returns_vector: np.ndarray,
-    cov_matrix: np.ndarray,
-    risk_free_rate: float,
-    lambda_reg: float,
-) -> float:
-    s_ratio = _sharpe_ratio(weights, annualized_mean_returns_vector, cov_matrix, risk_free_rate)
-    l2_penalty = lambda_reg * np.sum(weights**2)
-    return -s_ratio + l2_penalty
 
 
 class PortfolioOptimizer:
@@ -104,9 +73,9 @@ class PortfolioOptimizer:
         mean_returns_filtered = self.mean_returns.loc[final_weights.index]
         cov_matrix_filtered = self.cov_matrix.loc[final_weights.index, final_weights.index]
 
-        log_return = _expected_returns(final_weights.values, mean_returns_filtered.values)
-        std_dev = _standard_deviations(final_weights.values, cov_matrix_filtered.values)
-        sharpe_ratio = _sharpe_ratio(
+        log_return = portfolio_return(final_weights.values, mean_returns_filtered.values)
+        std_dev = portfolio_volatility(final_weights.values, cov_matrix_filtered.values)
+        sharpe_ratio = objectives.sharpe_ratio(
             final_weights.values,
             mean_returns_filtered.values,
             cov_matrix_filtered.values,
@@ -143,7 +112,7 @@ class PortfolioOptimizer:
         initial_weights = np.array([1.0 / num_asset] * num_asset)
 
         opt_result = minimize(
-            _neg_sharpe_ratio_L2,
+            negative_sharpe_ratio,
             initial_weights,
             args=(
                 self.mean_returns.values,
@@ -178,7 +147,7 @@ class PortfolioOptimizer:
         # 1. Find Min Volatility portfolio
         min_vol_constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
         min_vol_opt = minimize(
-            _standard_deviations,
+            portfolio_volatility,
             initial_weights,
             args=(self.cov_matrix.values,),
             method="SLSQP",
@@ -208,11 +177,11 @@ class PortfolioOptimizer:
                 {"type": "eq", "fun": lambda w: np.sum(w) - 1},
                 {
                     "type": "eq",
-                    "fun": lambda w: _expected_returns(w, self.mean_returns.values) - target_return,
+                    "fun": lambda w: portfolio_return(w, self.mean_returns.values) - target_return,
                 },
             ]
             opt = minimize(
-                _standard_deviations,
+                portfolio_volatility,
                 initial_weights,
                 args=(self.cov_matrix.values,),
                 method="SLSQP",

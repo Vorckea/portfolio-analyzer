@@ -13,7 +13,10 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from portfolio_analyzer.analysis.metrics import calculate_performance_summary
+from portfolio_analyzer.analysis.metrics import (
+    calculate_performance_summary,
+    calculate_relative_metrics,
+)
 from portfolio_analyzer.config import AppConfig
 from portfolio_analyzer.core.portfolio_optimizer import PortfolioOptimizer
 from portfolio_analyzer.data.data_fetcher import fetch_price_data
@@ -210,39 +213,22 @@ class Backtester:
             strategy_series, self.config.risk_free_rate, periods_per_year
         )
 
-        # --- Benchmark Metrics ---
+        # --- Benchmark and Relative Metrics ---
         if "Benchmark Value" in result_df.columns:
             benchmark_series = result_df["Benchmark Value"].dropna()
-            metrics["benchmark"] = calculate_performance_summary(
-                benchmark_series, self.config.risk_free_rate, periods_per_year
-            )
+            if not benchmark_series.empty:
+                metrics["benchmark"] = calculate_performance_summary(
+                    benchmark_series, self.config.risk_free_rate, periods_per_year
+                )
 
-            # --- Relative Metrics (Alpha, Beta) ---
-            if metrics["strategy"] and metrics["benchmark"]:
-                portfolio_returns = strategy_series.pct_change().dropna()
-                benchmark_returns = benchmark_series.pct_change().dropna()
-
-                aligned_df = pd.concat([portfolio_returns, benchmark_returns], axis=1, join="inner")
-                aligned_df.columns = ["Portfolio", "Benchmark"]
-
-                if len(aligned_df) > 1 and aligned_df["Benchmark"].var() > 0:
-                    # Retrieve annualized returns from the metrics dict
-                    strat_annualized_return = metrics["strategy"].get("Annualized Return", 0.0)
-                    bench_annualized_return = metrics["benchmark"].get("Annualized Return", 0.0)
-
-                    # Calculate Beta
-                    cov_matrix = aligned_df.cov()
-                    beta = cov_matrix.iloc[0, 1] / cov_matrix.iloc[1, 1]
-                    metrics["strategy"]["Beta"] = beta
-
-                    # Calculate Alpha (Jensen's Alpha)
-                    alpha = strat_annualized_return - (
-                        self.config.risk_free_rate
-                        + beta * (bench_annualized_return - self.config.risk_free_rate)
-                    )
-                    metrics["strategy"]["Alpha"] = alpha
-                else:
-                    metrics["strategy"]["Beta"] = np.nan
-                    metrics["strategy"]["Alpha"] = np.nan
+                # Calculate Alpha and Beta using the new utility function
+                relative_metrics = calculate_relative_metrics(
+                    strategy_returns=strategy_series.pct_change(),
+                    benchmark_returns=benchmark_series.pct_change(),
+                    risk_free_rate=self.config.risk_free_rate,
+                    strategy_annualized_return=metrics["strategy"].get("Annualized Return", 0.0),
+                    benchmark_annualized_return=metrics["benchmark"].get("Annualized Return", 0.0),
+                )
+                metrics["strategy"].update(relative_metrics)
 
         return metrics

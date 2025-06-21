@@ -30,3 +30,26 @@ def calculate_performance_summary(
     metrics["Max Drawdown"] = drawdown.min()
 
     return metrics
+
+
+def calculate_relative_metrics(
+    strategy_returns: pd.Series,
+    benchmark_returns: pd.Series,
+    risk_free_rate: float,
+    strategy_annualized_return: float,
+    benchmark_annualized_return: float,
+) -> dict:
+    aligned_df = pd.concat([strategy_returns, benchmark_returns], axis=1, join="inner").dropna()
+    aligned_df.columns = ["Strategy", "Benchmark"]
+
+    if len(aligned_df) < 2 or aligned_df["Benchmark"].var() == 0:
+        return {"Alpha": np.nan, "Beta": np.nan}
+
+    cov_matrix = aligned_df.cov()
+    beta = cov_matrix.iloc[0, 1] / cov_matrix.iloc[1, 1]
+
+    alpha = strategy_annualized_return - (
+        risk_free_rate + beta * (benchmark_annualized_return - risk_free_rate)
+    )
+
+    return {"Alpha": alpha, "Beta": beta}
