@@ -8,7 +8,15 @@ from portfolio_analyzer.data.models import PortfolioResult, SimulationResult
 
 
 class MonteCarloSimulator:
+    """Runs Monte Carlo simulations to project portfolio performance."""
+
     def __init__(self, config: AppConfig):
+        """Initialize the MonteCarloSimulator.
+
+        Args:
+            config (AppConfig): The application configuration object.
+
+        """
         self.mc_config = config.monte_carlo
         self.trading_days = config.trading_days_per_year
 
@@ -19,6 +27,23 @@ class MonteCarloSimulator:
         time_horizon_years: float,
         df_t_distribution: int,
     ) -> SimulationResult:
+        """Run the Monte Carlo simulation for a given optimized portfolio.
+
+        Args:
+            portfolio_result (PortfolioResult): The result of a portfolio optimization.
+            num_simulations (int): The number of simulation paths to generate.
+            time_horizon_years (float): The simulation period in years.
+            df_t_distribution (int): Degrees of freedom for the Student's t-distribution.
+                If <= 2, a Normal distribution is used instead.
+
+        Returns:
+            SimulationResult: An object containing the simulation results, including
+                summary statistics and the generated paths.
+
+        Raises:
+            ValueError: If the portfolio_result is invalid or incomplete.
+
+        """
         if (
             not portfolio_result.success
             or portfolio_result.opt_weights is None
@@ -61,6 +86,10 @@ class MonteCarloSimulator:
         num_days: int,
         df_t: int,
     ) -> np.ndarray:
+        """Generate the raw simulation paths.
+
+        Internal helper for the `run` method.
+        """
         if df_t > 2:  # Use Student's t-distribution
             # Scale covariance for t-distribution properties
             scale_matrix = (df_t - 2) / df_t * cov_matrix_arr
@@ -82,6 +111,10 @@ class MonteCarloSimulator:
         return self.mc_config.initial_value * compounded_returns
 
     def _calculate_statistics(self, sim_paths: np.ndarray) -> Tuple[Dict[str, float], np.ndarray]:
+        """Calculate summary statistics from the simulation paths.
+
+        Internal helper for the `run` method.
+        """
         final_values = sim_paths[-1, :]
         stats = {
             "mean": np.mean(final_values),

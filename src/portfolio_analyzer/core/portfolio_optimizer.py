@@ -22,12 +22,27 @@ from portfolio_analyzer.utils.exceptions import InputAlignmentError, Optimizatio
 
 
 class PortfolioOptimizer:
+    """Performs mean-variance portfolio optimization."""
+
     def __init__(
         self,
         mean_returns: pd.Series,
         cov_matrix: pd.DataFrame,
         config: AppConfig,
     ):
+        """Initialize the PortfolioOptimizer.
+
+        Aligns tickers between mean_returns and cov_matrix to ensure consistency.
+
+        Args:
+            mean_returns (pd.Series): A series of mean expected returns for each asset.
+            cov_matrix (pd.DataFrame): The covariance matrix of asset returns.
+            config (AppConfig): The application configuration object.
+
+        Raises:
+            InputAlignmentError: If the inputs have no common tickers.
+
+        """
         if not mean_returns.index.equals(cov_matrix.index):
             common_tickers = sorted(list(set(mean_returns.index) & set(cov_matrix.index)))
             if not common_tickers:
@@ -49,7 +64,10 @@ class PortfolioOptimizer:
         self.config = config
 
     def _create_result_from_weights(self, weights: np.ndarray) -> PortfolioResult:
-        """Helper to create a PortfolioResult object from a given set of weights."""
+        """Create a PortfolioResult object from a set of weights.
+
+        Internal helper to standardize result creation after an optimization.
+        """
         final_weights = pd.Series(weights, index=self.tickers)
         final_weights = final_weights[final_weights > self.config.optimization.min_weight_per_asset]
         if final_weights.empty:
@@ -86,10 +104,27 @@ class PortfolioOptimizer:
         )
 
     def optimize(self, lambda_reg: float) -> Optional[PortfolioResult]:
-        """Perform the core portfolio optimization and stores the result."""
+        """Perform portfolio optimization to find the tangency portfolio.
+
+        This method seeks to maximize the Sharpe ratio, potentially with L2
+        regularization to control overfitting and encourage diversification.
+
+        Args:
+            lambda_reg (float): The L2 regularization coefficient. Higher values
+                result in more diversified, less concentrated portfolios.
+
+        Returns:
+            Optional[PortfolioResult]: A data object containing the results of the
+                optimization, or None if it fails.
+
+        """
         return self._perform_core_optimization(lambda_val=lambda_reg)
 
     def _perform_core_optimization(self, lambda_val: float) -> PortfolioResult:
+        """The core optimization routine using scipy.optimize.minimize.
+
+        Internal helper for the `optimize` method.
+        """
         num_asset = len(self.tickers)
         if num_asset == 0:
             return PortfolioResult(success=False)
@@ -122,12 +157,25 @@ class PortfolioOptimizer:
     def calculate_efficient_frontier(
         self, num_points: int = 100
     ) -> tuple[pd.DataFrame, PortfolioResult, PortfolioResult]:
-        """Calculate the efficient frontier.
+        """Calculate the efficient frontier for the given assets.
 
-        Returns a tuple containing:
-        - A DataFrame with frontier points (Return, Volatility, Sharpe).
-        - The PortfolioResult for the maximum Sharpe ratio portfolio.
-        - The PortfolioResult for the minimum volatility portfolio.
+        The efficient frontier is the set of optimal portfolios that offer the
+        highest expected return for a given level of risk (volatility).
+
+        Args:
+            num_points (int): The number of points to calculate along the frontier.
+
+        Returns:
+            tuple[pd.DataFrame, PortfolioResult, PortfolioResult]: A tuple containing:
+                - A DataFrame with the 'Return' and 'Volatility' for each point
+                  on the frontier.
+                - The result for the Maximum Sharpe Ratio portfolio.
+                - The result for the Minimum Volatility portfolio.
+
+        Raises:
+            OptimizationError: If the optimization fails for key points on the
+                frontier (e.g., min volatility or max Sharpe).
+
         """
         num_asset = len(self.tickers)
         bounds = tuple((0, 1.0) for _ in range(num_asset))

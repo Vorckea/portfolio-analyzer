@@ -6,7 +6,15 @@ from portfolio_analyzer.utils.html_helpers import get_summary_card_html
 
 
 def display_optimization_summary_html(result: PortfolioResult) -> HTML:
-    """Return a styled HTML summary of the optimization results."""
+    """Generate a styled HTML summary of portfolio optimization results.
+
+    Args:
+        result (PortfolioResult): The portfolio optimization result object.
+
+    Returns:
+        HTML: An IPython.display.HTML object containing the formatted summary.
+
+    """
     if not result or not result.success:
         html = """
         <div style="display: flex; justify-content: flex-start;">
@@ -38,7 +46,15 @@ def display_optimization_summary_html(result: PortfolioResult) -> HTML:
 
 
 def display_simulation_summary_html(result: SimulationResult) -> HTML:
-    """Return a cleaner, left-aligned HTML summary of the simulation results."""
+    """Generate a cleaner, left-aligned HTML summary of the simulation results.
+
+    Args:
+        result (SimulationResult): The Monte Carlo simulation result object.
+
+    Returns:
+        HTML: An IPython.display.HTML object containing the formatted summary.
+
+    """
     title = "Monte Carlo Simulation Summary"
     subtitle = f"Ran <strong>{result.num_simulations:,}</strong> simulations over <strong>{result.time_horizon_years}</strong> year(s)."  # noqa: E501
     stats = result.stats
@@ -67,7 +83,15 @@ def display_simulation_summary_html(result: SimulationResult) -> HTML:
 
 
 def display_backtest_summary_html(metrics: dict) -> HTML:
-    """Return a styled HTML summary of the backtest performance metrics."""
+    """Generate a styled HTML summary of backtest performance metrics.
+
+    Args:
+        metrics (dict): A dictionary of performance metrics from a backtest run.
+
+    Returns:
+        HTML: An IPython.display.HTML object containing the formatted summary table.
+
+    """
     strat_metrics = metrics.get("strategy", {})
     bench_metrics = metrics.get("benchmark", {})
 

@@ -9,28 +9,28 @@ import numpy as np
 
 
 def portfolio_return(weights: np.ndarray, mean_returns: np.ndarray) -> float:
-    """Calculate the expected return of a portfolio given weights and mean returns.
+    """Calculate the expected return of a portfolio.
 
     Args:
-        weights (np.ndarray): Portfolio weights.
-        mean_returns (np.ndarray): Mean returns of assets.
+        weights (np.ndarray): The weights of the assets in the portfolio.
+        mean_returns (np.ndarray): The expected returns of the assets.
 
     Returns:
-        float: Expected portfolio return.
+        float: The expected portfolio return.
 
     """
     return np.sum(weights * mean_returns)
 
 
 def portfolio_volatility(weights: np.ndarray, cov_matrix: np.ndarray) -> float:
-    """Calculate the portfolio volatility given weights and covariance matrix.
+    """Calculate the volatility (standard deviation) of a portfolio.
 
     Args:
-        weights (np.ndarray): Portfolio weights.
-        cov_matrix (np.ndarray): Covariance matrix of asset returns.
+        weights (np.ndarray): The weights of the assets in the portfolio.
+        cov_matrix (np.ndarray): The covariance matrix of the assets.
 
     Returns:
-        float: Portfolio volatility.
+        float: The portfolio volatility.
 
     """
     return np.sqrt(weights.T @ cov_matrix @ weights)
@@ -45,13 +45,13 @@ def sharpe_ratio(
     """Calculate the Sharpe ratio of a portfolio.
 
     Args:
-        weights (np.ndarray): Portfolio weights.
-        mean_returns (np.ndarray): Mean returns of assets.
-        cov_matrix (np.ndarray): Covariance matrix of asset returns.
-        risk_free_rate (float): Risk-free rate for Sharpe ratio calculation.
+        weights (np.ndarray): The weights of the assets in the portfolio.
+        mean_returns (np.ndarray): The expected returns of the assets.
+        cov_matrix (np.ndarray): The covariance matrix of the assets.
+        risk_free_rate (float): The risk-free rate of return.
 
     Returns:
-        float: Sharpe ratio of the portfolio.
+        float: The portfolio's Sharpe ratio.
 
     """
     p_return = portfolio_return(weights, mean_returns)
@@ -71,19 +71,23 @@ def negative_sharpe_ratio(
     risk_free_rate: float = 0.0,
     lambda_reg: float = 0.0,
 ) -> float:
-    """Calculate the negative Sharpe ratio with L2 regularization.
+    """Calculate the negative Sharpe ratio, suitable for minimization.
+
+    Includes an L2 regularization term on weights to encourage diversification.
 
     Args:
-        weights (np.ndarray): Portfolio weights.
-        mean_returns (np.ndarray): Mean returns of assets.
-        cov_matrix (np.ndarray): Covariance matrix of asset returns.
-        risk_free_rate (float): Risk-free rate for Sharpe ratio calculation.
-        lambda_reg (float): Regularization parameter for L2 penalty.
+        weights (np.ndarray): The weights of the assets in the portfolio.
+        mean_returns (np.ndarray): The expected returns of the assets.
+        cov_matrix (np.ndarray): The covariance matrix of the assets.
+        risk_free_rate (float): The risk-free rate of return.
+        lambda_reg (float): The L2 regularization penalty coefficient.
 
     Returns:
-        float: Negative Sharpe ratio with L2 penalty.
+        float: The negative Sharpe ratio, including the regularization penalty.
 
     """
+    # The negative of the Sharpe ratio is minimized
+    # We add a regularization term to the volatility
     s_ratio = sharpe_ratio(weights, mean_returns, cov_matrix, risk_free_rate)
     l2_penalty = lambda_reg * np.sum(weights**2)
     return -s_ratio + l2_penalty

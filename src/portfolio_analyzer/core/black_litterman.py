@@ -1,7 +1,8 @@
 """Black-Litterman Model for portfolio optimization.
 
-This class implements the Black-Litterman model for portfolio optimization,
-allowing for the incorporation of subjective views on asset returns.
+This module implements the Black-Litterman model, which allows for the
+incorporation of subjective views on asset returns into the mean-variance
+optimization framework, producing a blended posterior estimate of returns.
 """
 
 from typing import Optional
@@ -11,7 +12,14 @@ import pandas as pd
 
 
 class BlackLittermanModel:
-    """Black-Litterman Model for portfolio optimization."""
+    """Implements the Black-Litterman model for portfolio optimization.
+
+    This model combines market-implied equilibrium returns with an investor's
+    subjective views to produce a posterior estimate of expected returns. This
+    posterior return vector can then be used in a mean-variance optimizer.
+
+    # TODO(user): Add attributes once the class implementation is complete.
+    """
 
     def __init__(
         self,

@@ -1,4 +1,10 @@
-"""Prepares model inputs for portfolio optimization and analysis."""
+"""Prepares model inputs for portfolio optimization and analysis.
+
+This module contains the core data pipeline functions. It fetches raw price
+and financial data, processes it into log returns, calculates covariance
+matrices, and optionally applies the Black-Litterman model to generate the
+final inputs (mean returns, covariance) for the optimizer.
+"""
 
 import logging
 from typing import Dict, List, Optional, Tuple
@@ -26,28 +32,25 @@ def build_model_inputs(
     market_cap_weights: Optional[pd.Series] = None,
     dcf_views: Optional[Dict[str, float]] = None,
 ) -> Tuple[pd.Series, pd.DataFrame, pd.Series, Optional[pd.Series], List[str]]:
-    """Build all necessary model inputs from pre-processed data.
+    """Build the final model inputs from processed log returns and views.
 
-    This function encapsulates the core financial logic for creating robust
-    mean return and covariance estimates using EWMA, Ledoit-Wolf shrinkage,
-    and the Black-Litterman model. It is designed to be reusable, for example,
-    in a backtesting context where inputs need to be generated repeatedly.
+    This is a core component of the data pipeline that takes log returns and
+    optional market cap weights and DCF views to produce the final mean
+    return vector and covariance matrix for optimization.
 
     Args:
-        log_returns: DataFrame of daily log returns for assets.
-        config: The application configuration object.
-        market_cap_weights: Series of market cap weights for calculating
-            equilibrium returns. Must be normalized to sum to 1.
-        dcf_views: A dictionary of views for the Black-Litterman model,
-            mapping tickers to expected returns.
+        log_returns (pd.DataFrame): DataFrame of daily log returns for assets.
+        config (AppConfig): The application configuration object.
+        market_cap_weights (Optional[pd.Series]): Market cap weights for assets.
+            Required for Black-Litterman.
+        dcf_views (Optional[Dict[str, float]]): Views on asset returns, typically
+            from a DCF model. Required for Black-Litterman.
 
     Returns:
-        A tuple containing the calculated model inputs:
-        - final_mean_returns (pd.Series)
-        - final_cov_matrix (pd.DataFrame)
-        - hist_mean_returns (pd.Series)
-        - implied_equilibrium_returns (Optional[pd.Series])
-        - final_tickers (List[str])
+        Tuple[pd.Series, pd.DataFrame, pd.Series, Optional[pd.Series], List[str]]:
+            A tuple containing the final mean returns, covariance matrix,
+            historical mean returns, implied equilibrium returns, and a list of
+            final tickers.
 
     """
     # 1. Calculate historical mean returns with EWMA and shrinkage
@@ -158,21 +161,17 @@ def build_model_inputs(
 
 
 def prepare_model_inputs(config: AppConfig) -> ModelInputs:
-    """Orchestrates the entire data preparation pipeline with robust filtering.
+    """Orchestrates the entire data preparation pipeline.
 
-    This function handles fetching all necessary raw data (prices, market caps),
-    filtering it to a consistent set of assets, and then calls the core
-    `build_model_inputs` function to generate the final estimates for
-    optimization.
+    Fetches prices, calculates returns, and builds all necessary inputs for
+    the optimization models, returning them in a structured dataclass.
 
     Args:
-        config: The application configuration object.
+        config (AppConfig): The application configuration object.
 
     Returns:
-        A ModelInputs object containing all data needed for analysis.
+        ModelInputs: A dataclass holding all the prepared data.
 
-    Raises:
-        DataFetchingError: If critical data like prices cannot be fetched.
     """
     logger.info(
         "--- Starting Data Pipeline for %d tickers from %s to %s ---",
@@ -243,7 +242,10 @@ def prepare_model_inputs(config: AppConfig) -> ModelInputs:
 
 
 def _calculate_log_returns(close_df: pd.DataFrame) -> pd.DataFrame:
-    """Calculates daily log returns from price data."""
+    """Calculate daily logarithmic returns from a DataFrame of closing prices.
+
+    Internal helper function.
+    """
     return np.log(close_df / close_df.shift(1)).dropna()
 
 

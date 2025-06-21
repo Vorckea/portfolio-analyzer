@@ -9,9 +9,16 @@ logger = logging.getLogger(__name__)
 
 
 class DCFCalculator:
-    """An advanced, adaptive 3-stage DCF model with improved validation and logging."""
+    """An advanced, adaptive 3-stage DCF model with improved validation and logging.
+
+    This class fetches financial data for a given stock ticker, validates it
+    against configured thresholds, and calculates an intrinsic value using a
+    Discounted Cash Flow (DCF) model. The result is used to generate a view
+    for the Black-Litterman model.
+    """
 
     def __init__(self, ticker_symbol: str, config: DCFConfig, risk_free_rate: float):
+        """Initialize the DCFCalculator."""
         self.ticker_symbol = ticker_symbol
         self.ticker = yf.Ticker(ticker_symbol)
         self.config = config
@@ -19,7 +26,15 @@ class DCFCalculator:
         self._data = {}
 
     def _fetch_data(self) -> bool:
-        """Fetches and validates required data, printing the specific reason for skipping."""
+        """Fetch and validate required financial data for the DCF calculation.
+
+        It checks for essential data points, validates sector, beta, and FCF,
+        and logs the specific reason for skipping a ticker if validation fails.
+
+        Returns:
+            bool: True if data was fetched and validated successfully, False otherwise.
+
+        """
         try:
             info = self.ticker.info
 
@@ -75,14 +90,23 @@ class DCFCalculator:
             self._data["fcf"] = avg_fcf
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception(
                 "Skipping %s due to an unexpected error during data fetching.", self.ticker_symbol
             )
             return False
 
     def _get_adaptive_growth_rate(self) -> float:
-        """Determines the growth rate for Stage 1."""
+        """Determine the initial growth rate for the DCF model.
+
+        It prioritizes the analyst's growth estimate if available and valid,
+        clipping it within a configured min/max range. Otherwise, it falls
+        back to a default growth rate.
+
+        Returns:
+            float: The determined growth rate for Stage 1 of the DCF model.
+
+        """
         analyst_growth = self._data.get("analyst_growth_estimate")
         if analyst_growth and isinstance(analyst_growth, (int, float)):
             return np.clip(analyst_growth, self.config.min_growth_rate, self.config.max_growth_rate)

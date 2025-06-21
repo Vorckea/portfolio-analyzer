@@ -25,17 +25,13 @@ logger = logging.getLogger(__name__)
 
 
 class Backtester:
-    """Backtester class for executing portfolio optimization strategies over historical data.
-
-    This optimized version fetches data once to improve performance.
-    """
+    """Runs historical backtests of portfolio optimization strategies."""
 
     def __init__(self, config: AppConfig):
-        """Initialize the Backtester with the application configuration.
+        """Initialize the Backtester.
 
         Args:
-            config (AppConfig): The application configuration containing all necessary parameters
-            for backtesting, including tickers, date range, and optimization settings.
+            config (AppConfig): The application configuration object.
 
         """
         self.config = config
@@ -65,10 +61,23 @@ class Backtester:
         return mean_returns, cov_matrix
 
     def run(self, benchmark_ticker: Optional[str] = None) -> Tuple[pd.DataFrame, dict]:
-        """Execute the backtest over the specified historical period.
+        """Run the backtest from the configured start to end date.
 
-        This version is optimized to fetch all data once, avoiding repeated API calls
-        during the rebalancing loop.
+        At each rebalancing period, it fetches historical data, prepares model
+        inputs, and runs the portfolio optimization. The resulting portfolio
+        weights are used to calculate returns for the subsequent period.
+
+        Args:
+            benchmark_ticker (Optional[str]): The ticker symbol for a benchmark
+                asset (e.g., an index) to compare performance against.
+
+        Returns:
+            Tuple[pd.DataFrame, dict]: A tuple containing:
+                - A DataFrame with the portfolio value over time, alongside the
+                  benchmark value if provided.
+                - A dictionary containing key performance metrics for both the
+                  strategy and the benchmark.
+
         """
         logger.info("--- Running Optimized Backtest for '%s' ---", self.strategy_name)
 

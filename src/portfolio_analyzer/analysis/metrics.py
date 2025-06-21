@@ -5,6 +5,19 @@ import pandas as pd
 def calculate_performance_summary(
     value_series: pd.Series, risk_free_rate: float, periods_per_year: int
 ) -> dict:
+    """Calculate key performance metrics for a given portfolio value series.
+
+    Args:
+        value_series (pd.Series): A time series of portfolio values.
+        risk_free_rate (float): The annualized risk-free rate.
+        periods_per_year (int): The number of trading periods in a year
+            (e.g., 252 for daily data).
+
+    Returns:
+        dict: A dictionary of performance metrics, including annualized return,
+            volatility, Sharpe ratio, and max drawdown.
+
+    """
     if value_series.empty or len(value_series) < 2:
         return {}
 
@@ -39,6 +52,21 @@ def calculate_relative_metrics(
     strategy_annualized_return: float,
     benchmark_annualized_return: float,
 ) -> dict:
+    """Calculate metrics that compare a strategy's performance to a benchmark.
+
+    Args:
+        strategy_returns (pd.Series): The periodic returns of the strategy.
+        benchmark_returns (pd.Series): The periodic returns of the benchmark.
+        risk_free_rate (float): The annualized risk-free rate.
+        strategy_annualized_return (float): The pre-calculated annualized
+            return of the strategy.
+        benchmark_annualized_return (float): The pre-calculated annualized
+            return of the benchmark.
+
+    Returns:
+        dict: A dictionary containing relative metrics like Beta and Alpha.
+
+    """
     aligned_df = pd.concat([strategy_returns, benchmark_returns], axis=1, join="inner").dropna()
     aligned_df.columns = ["Strategy", "Benchmark"]
 

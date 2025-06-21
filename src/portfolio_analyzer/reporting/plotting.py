@@ -239,7 +239,12 @@ def plot_optimal_weights(
 
 
 def display_simulation_summary(result: SimulationResult) -> None:
-    """Print a formatted summary of simulation statistics."""
+    """Print a formatted text summary of simulation statistics to the console.
+
+    Args:
+        result (SimulationResult): The Monte Carlo simulation result object.
+
+    """
     print("\n--- Simulation Results Summary ---")
     print(f"Final Portfolio Value (Median): {result.stats['median']:,.2f}")
     print(f"Final Portfolio Value (Mean):   {result.stats['mean']:,.2f}")
@@ -252,7 +257,14 @@ def display_simulation_summary(result: SimulationResult) -> None:
 
 
 def plot_simulation_distribution(result: SimulationResult, ax: plt.Axes = None):
-    """Plot the distribution of final portfolio values."""
+    """Plot the distribution of final portfolio values from a simulation.
+
+    Args:
+        result (SimulationResult): The Monte Carlo simulation result object.
+        ax (plt.Axes, optional): A matplotlib axes object to plot on. If None,
+            a new figure and axes are created.
+
+    """
     if ax is None:
         fig, ax = plt.subplots(figsize=(12, 6))
     sns.histplot(
@@ -297,7 +309,14 @@ def plot_simulation_distribution(result: SimulationResult, ax: plt.Axes = None):
 
 
 def plot_simulation_paths(result: SimulationResult, ax: plt.Axes = None):
-    """Plot a sample of the simulated portfolio value paths over time."""
+    """Plot a sample of simulated portfolio value paths over time.
+
+    Args:
+        result (SimulationResult): The Monte Carlo simulation result object.
+        ax (plt.Axes, optional): A matplotlib axes object to plot on. If None,
+            a new figure and axes are created.
+
+    """
     if ax is None:
         fig, ax = plt.subplots(figsize=(12, 6))
     num_to_plot = min(500, result.num_simulations)
@@ -336,7 +355,18 @@ def plot_efficient_frontier(
     current_opt_result: Optional[PortfolioResult] = None,
     ax: plt.Axes = None,
 ) -> None:
-    """Plot the efficient frontier with key portfolios highlighted."""
+    """Plot the efficient frontier with key portfolios highlighted.
+
+    Args:
+        frontier_df (pd.DataFrame): DataFrame of return and volatility points.
+        max_sharpe_result (PortfolioResult): The max Sharpe ratio portfolio result.
+        min_vol_result (PortfolioResult): The minimum volatility portfolio result.
+        current_opt_result (Optional[PortfolioResult]): The currently selected
+            optimized portfolio to highlight.
+        ax (plt.Axes, optional): A matplotlib axes object to plot on. If None,
+            a new figure and axes are created.
+
+    """
     fig = None
     if ax is None:
         fig, ax = plt.subplots(figsize=(12, 8))
@@ -415,13 +445,14 @@ def plot_backtest_results(
     benchmark_ticker: Optional[str] = None,
     ax: Optional[plt.Axes] = None,
 ) -> None:
-    """Plot the portfolio value from backtest results against a benchmark.
+    """Plot the portfolio value over time from a backtest against a benchmark.
 
     Args:
-        backtest_results: DataFrame with 'Portfolio Value' and optionally 'Benchmark Value'.
-        benchmark_ticker: The ticker symbol for the benchmark, used in the plot label.
-        ax: An optional matplotlib Axes object to plot on. If None, a new figure
-            and axes are created.
+        backtest_results (pd.DataFrame): DataFrame containing the portfolio
+            value series and optionally a benchmark series.
+        benchmark_ticker (Optional[str]): The ticker of the benchmark used.
+        ax (Optional[plt.Axes]): A matplotlib axes object to plot on. If None,
+            a new figure and axes are created.
 
     """
     if ax is None:

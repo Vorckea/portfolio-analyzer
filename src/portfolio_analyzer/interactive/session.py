@@ -20,7 +20,28 @@ from portfolio_analyzer.reporting.plotting import (
 
 
 class PortfolioAnalysisSession:
+    """Manages the state and logic for an interactive analysis session.
+
+    This class holds the optimizer and simulator instances and provides methods
+    that can be linked to Jupyter widgets for interactive exploration of
+    portfolio optimization and simulation parameters.
+
+    Attributes:
+        config (AppConfig): The application configuration.
+        optimizer (Optional[PortfolioOptimizer]): The portfolio optimizer instance.
+        mc_simulator (Optional[MonteCarloSimulator]): The Monte Carlo simulator instance.
+        latest_result (Optional[PortfolioResult]): The result of the last optimization.
+
+    """
+
     def __init__(self, config: AppConfig, model_inputs: ip.ModelInputs):
+        """Initialize the PortfolioAnalysisSession.
+
+        Args:
+            config (AppConfig): The application configuration object.
+            model_inputs (ip.ModelInputs): The prepared data inputs for the models.
+
+        """
         self.config = config
         self.model_inputs = model_inputs
         self.latest_result: Optional[PortfolioResult] = None
@@ -37,7 +58,15 @@ class PortfolioAnalysisSession:
             self.mc_simulator = None
 
     def run_interactive_optimization(self, lambda_reg: float):
-        """Run optimization and displays the summary and weights plot."""
+        """Run optimization and displays results for interactive use.
+
+        This method is designed to be called from an `ipywidgets.interact`
+        slider to allow real-time updates of the L2 regularization parameter.
+
+        Args:
+            lambda_reg (float): The L2 regularization coefficient.
+
+        """
         if not self.optimizer:
             print("Optimizer not initialized due to data pipeline failure.")
             return
@@ -56,7 +85,17 @@ class PortfolioAnalysisSession:
     def run_interactive_monte_carlo(
         self, num_sim_interactive: int, time_horizon_interactive: float, df_t_interactive: int
     ):
-        """Run Monte Carlo simulation on the latest optimized portfolio."""
+        """Run Monte Carlo simulation and displays results for interactive use.
+
+        This method is designed to be called from `ipywidgets.interact` sliders
+        to allow real-time updates of simulation parameters.
+
+        Args:
+            num_sim_interactive (int): The number of simulation paths.
+            time_horizon_interactive (float): The simulation time horizon in years.
+            df_t_interactive (int): The degrees of freedom for the Student's t-distribution.
+
+        """
         if not self.latest_result or not self.latest_result.success:
             print("Optimization result not available. Please run the optimization widget first.")
             return
