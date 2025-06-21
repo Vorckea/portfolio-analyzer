@@ -7,12 +7,11 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
-from portfolio_analyzer.analysis.monte_carlo_simulator import SimulationResult
-from portfolio_analyzer.core.portfolio_optimizer import PortfolioResult
+from portfolio_analyzer.data.models import PortfolioResult, SimulationResult
 
 
 def calculate_correlation_matrix(cov_matrix: pd.DataFrame) -> pd.DataFrame:
-    """Calculates the correlation matrix from a covariance matrix."""
+    """Calculate the correlation matrix from a covariance matrix."""
     if not isinstance(cov_matrix, pd.DataFrame) or cov_matrix.empty:
         return pd.DataFrame()
 
@@ -60,7 +59,7 @@ def plot_correlation_heatmap(correlation_matrix: pd.DataFrame) -> None:
 def plot_correlation_network(
     correlation_matrix: pd.DataFrame, threshold: float = 0.3, ax: plt.Axes = None
 ) -> None:
-    """Displays a network graph of asset correlations.
+    """Display a network graph of asset correlations.
 
     Nodes are always displayed. Edges are only shown for correlations
     with an absolute value greater than the threshold.
@@ -171,7 +170,7 @@ def plot_optimal_weights(
     lambda_reg: float,
     ax: plt.Axes = None,
 ) -> None:
-    """Plots a bar chart of the optimal portfolio weights."""
+    """Plot a bar chart of the optimal portfolio weights."""
     if not result or not result.success or result.opt_weights is None:
         # If we have an axes, we can display a message on it
         if ax:
@@ -240,7 +239,7 @@ def plot_optimal_weights(
 
 
 def display_simulation_summary(result: SimulationResult) -> None:
-    """Prints a formatted summary of simulation statistics."""
+    """Print a formatted summary of simulation statistics."""
     print("\n--- Simulation Results Summary ---")
     print(f"Final Portfolio Value (Median): {result.stats['median']:,.2f}")
     print(f"Final Portfolio Value (Mean):   {result.stats['mean']:,.2f}")
@@ -253,7 +252,7 @@ def display_simulation_summary(result: SimulationResult) -> None:
 
 
 def plot_simulation_distribution(result: SimulationResult, ax: plt.Axes = None):
-    """Plots the distribution of final portfolio values."""
+    """Plot the distribution of final portfolio values."""
     if ax is None:
         fig, ax = plt.subplots(figsize=(12, 6))
     sns.histplot(
@@ -298,7 +297,7 @@ def plot_simulation_distribution(result: SimulationResult, ax: plt.Axes = None):
 
 
 def plot_simulation_paths(result: SimulationResult, ax: plt.Axes = None):
-    """Plots a sample of the simulated portfolio value paths over time."""
+    """Plot a sample of the simulated portfolio value paths over time."""
     if ax is None:
         fig, ax = plt.subplots(figsize=(12, 6))
     num_to_plot = min(500, result.num_simulations)
@@ -337,7 +336,7 @@ def plot_efficient_frontier(
     current_opt_result: Optional[PortfolioResult] = None,
     ax: plt.Axes = None,
 ) -> None:
-    """Plots the efficient frontier with key portfolios highlighted."""
+    """Plot the efficient frontier with key portfolios highlighted."""
     fig = None
     if ax is None:
         fig, ax = plt.subplots(figsize=(12, 8))
@@ -404,6 +403,45 @@ def plot_efficient_frontier(
     ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: f"{x:.2%}"))
     ax.legend(loc="best", fontsize=11)
     ax.grid(True, linestyle="--", alpha=0.6)
+
+    if fig:
+        plt.tight_layout()
+        plt.show()
+        plt.close(fig)
+
+
+def plot_backtest_results(
+    backtest_results: pd.DataFrame,
+    benchmark_ticker: Optional[str] = None,
+    ax: Optional[plt.Axes] = None,
+) -> None:
+    """Plot the portfolio value from backtest results against a benchmark.
+
+    Args:
+        backtest_results: DataFrame with 'Portfolio Value' and optionally 'Benchmark Value'.
+        benchmark_ticker: The ticker symbol for the benchmark, used in the plot label.
+        ax: An optional matplotlib Axes object to plot on. If None, a new figure
+            and axes are created.
+
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(14, 7))
+
+    backtest_results["Portfolio Value"].plot(ax=ax, linewidth=2, label="Strategy")
+
+    if "Benchmark Value" in backtest_results.columns and benchmark_ticker:
+        backtest_results["Benchmark Value"].plot(
+            ax=ax,
+            linewidth=2,
+            label=f"Benchmark ({benchmark_ticker})",
+            linestyle="--",
+        )
+
+    ax.set_title("Backtest: Strategy vs. Benchmark", fontsize=16, fontweight="bold")
+    ax.set_xlabel("Date", fontsize=12)
+    ax.set_ylabel("Portfolio Value", fontsize=12)
+    ax.legend(loc="upper left")
+    ax.grid(True, linestyle="--", alpha=0.7)
 
     if fig:
         plt.tight_layout()

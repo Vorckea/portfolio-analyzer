@@ -4,7 +4,6 @@ This module provides the PortfolioOptimizer class and supporting functions
 for optimizing asset allocations using mean-variance analysis and regularization.
 """
 
-from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
@@ -18,22 +17,8 @@ from portfolio_analyzer.core.objectives import (
     portfolio_return,
     portfolio_volatility,
 )
+from portfolio_analyzer.data.models import PortfolioResult
 from portfolio_analyzer.utils.exceptions import InputAlignmentError, OptimizationError
-
-
-@dataclass
-class PortfolioResult:
-    """Holds the results of a portfolio optimization."""
-
-    success: bool
-    opt_weights: Optional[pd.DataFrame] = None
-    mean_returns: Optional[pd.Series] = None
-    cov_matrix: Optional[pd.DataFrame] = None
-    log_return: float = 0.0
-    std_dev: float = 0.0
-    sharpe_ratio: float = 0.0
-    arithmetic_return: float = 0.0
-    display_sharpe: float = 0.0
 
 
 class PortfolioOptimizer:

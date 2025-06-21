@@ -1,8 +1,7 @@
 import pandas as pd
 from IPython.display import HTML
 
-from portfolio_analyzer.analysis.monte_carlo_simulator import SimulationResult
-from portfolio_analyzer.core.portfolio_optimizer import PortfolioResult
+from portfolio_analyzer.data.models import PortfolioResult, SimulationResult
 from portfolio_analyzer.utils.html_helpers import get_summary_card_html
 
 

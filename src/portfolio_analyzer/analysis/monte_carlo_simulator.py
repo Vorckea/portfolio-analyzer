@@ -1,24 +1,10 @@
-from dataclasses import dataclass
 from typing import Dict, Tuple
 
 import numpy as np
 from scipy.stats import multivariate_normal, multivariate_t
 
 from portfolio_analyzer.config import AppConfig
-from portfolio_analyzer.core.portfolio_optimizer import PortfolioResult
-
-
-@dataclass
-class SimulationResult:
-    """ "Holds the results of a Monte Carlo simulation."""
-
-    stats: Dict[str, float]
-    final_values: np.ndarray
-    simulation_paths: np.ndarray
-    num_simulations: int
-    time_horizon_years: float
-    dist_model_name: str
-    initial_value: float
+from portfolio_analyzer.data.models import PortfolioResult, SimulationResult
 
 
 class MonteCarloSimulator:

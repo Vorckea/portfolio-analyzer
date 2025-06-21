@@ -1,7 +1,6 @@
 """Prepares model inputs for portfolio optimization and analysis."""
 
 import logging
-from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
@@ -15,23 +14,10 @@ from portfolio_analyzer.data.data_fetcher import (
     fetch_market_caps,
     fetch_price_data,
 )
+from portfolio_analyzer.data.models import ModelInputs
 from portfolio_analyzer.utils.exceptions import DataFetchingError
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ModelInputs:
-    """Holds all the data required for the optimization and analysis steps."""
-
-    mean_returns: pd.Series
-    cov_matrix: pd.DataFrame
-    log_returns: pd.DataFrame
-    close_df: pd.DataFrame
-    final_tickers: list[str]
-    w_mkt: pd.Series
-    hist_mean_returns: Optional[pd.Series] = None
-    implied_equilibrium_returns: Optional[pd.Series] = None
 
 
 def prepare_model_inputs(config: AppConfig) -> ModelInputs:
