@@ -1,3 +1,6 @@
+"""Prepares model inputs for portfolio optimization and analysis."""
+
+import logging
 from dataclasses import dataclass
 from typing import Optional
 
@@ -12,6 +15,8 @@ from portfolio_analyzer.data_fetcher import (
     fetch_market_caps,
     fetch_price_data,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -30,7 +35,13 @@ class ModelInputs:
 
 def prepare_model_inputs(config: AppConfig) -> ModelInputs:
     """Orchestrates the entire data preparation pipeline with robust filtering."""
-    print("--- Starting Data Pipeline ---")
+    logger.info(
+        "--- Starting Data Pipeline for %d tickers from %s to %s ---",
+        len(config.tickers),
+        config.date_range.start.strftime("%Y-%m-%d"),
+        config.date_range.end.strftime("%Y-%m-%d"),
+    )
+    logger.info("DCF Views Enabled: %s", config.use_dcf_views)
 
     # 1. Fetch all raw data first
     market_cap_series = fetch_market_caps(config.tickers)
@@ -40,25 +51,38 @@ def prepare_model_inputs(config: AppConfig) -> ModelInputs:
             start_date=config.date_range.start.strftime("%Y-%m-%d"),
             end_date=config.date_range.end.strftime("%Y-%m-%d"),
         )
+        logger.debug("Fetched price data shape: %s", close_df.shape)
     except ValueError as e:
-        print(f"Error during data fetching: {e}")
+        logger.error("Data fetching failed with a ValueError, cannot proceed.", exc_info=True)
         raise
 
     # 2. **CRITICAL**: Define the final list of tickers based on successful price data.
     final_tickers_list = close_df.columns.tolist()
-    print(f"\nProceeding with {len(final_tickers_list)} tickers that have valid price data.")
+    logger.info("Proceeding with %d tickers that have valid price data.", len(final_tickers_list))
 
     # 3. Filter and re-normalize market cap weights to match the final tickers
     w_mkt = pd.Series(dtype=float)
     if not market_cap_series.empty:
+        original_mkt_cap_tickers = set(market_cap_series.index)
         w_mkt_filtered = market_cap_series.reindex(final_tickers_list).dropna()
         if not w_mkt_filtered.empty:
             w_mkt = w_mkt_filtered / w_mkt_filtered.sum()
-            print("Successfully filtered and normalized market cap weights.")
+            logger.info(
+                "Successfully filtered and normalized market cap weights for %d tickers.",
+                len(w_mkt),
+            )
+            dropped_mkt_cap_tickers = original_mkt_cap_tickers - set(w_mkt.index)
+            if dropped_mkt_cap_tickers:
+                logger.debug(
+                    "Tickers dropped due to missing market cap: %s", dropped_mkt_cap_tickers
+                )
+        else:
+            logger.warning("No market cap data available for the filtered tickers.")
 
     # 4. Calculate DCF views and log returns
     dcf_views = calculate_dcf_views(config) if config.use_dcf_views else {}
     log_returns = _calculate_log_returns(close_df)
+    logger.debug("Calculated log returns shape: %s", log_returns.shape)
 
     # 5. Prepare final model inputs, passing the now-consistent data
     (
@@ -72,7 +96,7 @@ def prepare_model_inputs(config: AppConfig) -> ModelInputs:
 
     # 6. Final packaging of the model inputs
     final_tickers = mean_returns.index.tolist()
-    print("\n--- Data Pipeline Finished ---")
+    logger.info("--- Data Pipeline Finished ---")
     return ModelInputs(
         mean_returns=mean_returns,
         cov_matrix=cov_matrix,
@@ -118,6 +142,7 @@ def _prepare_optimization_inputs(
         config.trading_days_per_year,
     )
 
+    logger.info("Calculating annualized covariance matrix using Ledoit-Wolf shrinkage...")
     lw = LedoitWolf()
     lw.fit(log_returns)
     cov_matrix_annualized = pd.DataFrame(
@@ -125,13 +150,14 @@ def _prepare_optimization_inputs(
         index=log_returns.columns,
         columns=log_returns.columns,
     )
+    logger.debug("Calculated annualized covariance matrix shape: %s", cov_matrix_annualized.shape)
 
     final_mean_returns = hist_mean_returns.copy()
     implied_equilibrium_returns = None
     P_views, Q_views, Omega_df = None, None, None
 
     if dcf_views:
-        print("\nConstructing Black-Litterman views from DCF estimates...")
+        logger.info("Constructing Black-Litterman views from DCF estimates...")
         view_tickers = list(dcf_views.keys())
         aligned_view_tickers = [t for t in view_tickers if t in log_returns.columns]
         if aligned_view_tickers:
@@ -145,10 +171,10 @@ def _prepare_optimization_inputs(
             Omega_df = pd.DataFrame(
                 np.diag(omega_diag_views), index=Q_views.index, columns=Q_views.index
             )
-            print(f"Successfully constructed {len(Q_views)} views.")
+            logger.info("Successfully constructed %d views.", len(Q_views))
 
     if w_mkt is not None and not w_mkt.empty:
-        print("\nAttempting to run Black-Litterman model...")
+        logger.info("Attempting to run Black-Litterman model...")
         try:
             bl_model = BlackLittermanModel(
                 tau=config.black_litterman.tau,
@@ -163,10 +189,12 @@ def _prepare_optimization_inputs(
             implied_equilibrium_returns = bl_model.get_implied_equilibrium_returns()
 
             if posterior_returns is not None:
-                print("Successfully applied Black-Litterman model with views.")
+                logger.info("Successfully applied Black-Litterman model with views.")
                 final_mean_returns = posterior_returns
             else:
-                print("No valid views; blending historical and implied equilibrium returns.")
+                logger.warning(
+                    "No valid views; blending historical and implied equilibrium returns."
+                )
                 w_blend = config.black_litterman.equilibrium_blend_weight
                 common_idx = hist_mean_returns.index.intersection(implied_equilibrium_returns.index)
                 final_mean_returns = (
@@ -177,17 +205,26 @@ def _prepare_optimization_inputs(
             assets_no_mkt_cap = w_mkt[w_mkt <= 1e-9].index
             common_no_cap = assets_no_mkt_cap.intersection(final_mean_returns.index)
             if not common_no_cap.empty:
+                logger.info(
+                    "Updating returns for %d assets without market cap to use implied equilibrium "
+                    "returns.",
+                    len(common_no_cap),
+                )
                 final_mean_returns.update(implied_equilibrium_returns.loc[common_no_cap])
         except Exception as e:
-            print(f"Black-Litterman model failed: {e}. Using historical returns.")
+            logger.exception("Black-Litterman model failed. Reverting to historical returns.")
             final_mean_returns = hist_mean_returns
     else:
+        logger.info(
+            "No market cap weights provided; using historical returns as the final estimate."
+        )
         final_mean_returns = hist_mean_returns
 
     # **IMPROVEMENT**: Blend the final BL/Equilibrium returns with historical momentum.
     if config.black_litterman.momentum_blend_weight > 0 and implied_equilibrium_returns is not None:
-        print(
-            f"\nBlending final returns with {config.black_litterman.momentum_blend_weight:.0%} momentum."
+        logger.info(
+            f"Blending final returns with {config.black_litterman.momentum_blend_weight:.0%} "
+            f"momentum."
         )
         # Ensure both series are aligned before blending
         common_idx = final_mean_returns.index.intersection(hist_mean_returns.index)
@@ -200,6 +237,11 @@ def _prepare_optimization_inputs(
         )
 
     # Final alignment
+    logger.debug(
+        "Pre-alignment tickers: mean_returns=%d, cov_matrix=%d",
+        len(final_mean_returns),
+        len(cov_matrix_annualized),
+    )
     common_tickers = sorted(
         list(final_mean_returns.index.intersection(cov_matrix_annualized.index))
     )
@@ -212,7 +254,7 @@ def _prepare_optimization_inputs(
         else None
     )
 
-    print(f"\nInput preparation complete. Using {len(common_tickers)} tickers.")
+    logger.info("Input preparation complete. Using %d tickers.", len(common_tickers))
     return (
         final_mean_returns,
         final_cov_matrix,

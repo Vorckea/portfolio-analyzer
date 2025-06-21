@@ -1,17 +1,21 @@
+import logging
 import pandas as pd
 import yfinance as yf
 
 from portfolio_analyzer.config import AppConfig
 from portfolio_analyzer.dcf_calculator import DCFCalculator
 
+logger = logging.getLogger(__name__)
+
 
 def fetch_price_data(tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
     """Fetches historical adjusted close prices from yfinance, skipping any that fail."""
-    print("Fetching historical price data from yfinance...")
+    logger.info("Fetching historical price data for %d tickers...", len(tickers))
     # Use yfinance's built-in grouping for efficiency
     data = yf.download(tickers, start=start_date, end=end_date, progress=False, auto_adjust=True)
 
     if data.empty:
+        logger.error("No price data fetched for any tickers. yfinance returned an empty DataFrame.")
         raise ValueError("No price data fetched for any tickers.")
 
     # Handle multi-level columns if multiple tickers are downloaded
@@ -22,7 +26,7 @@ def fetch_price_data(tickers: list[str], start_date: str, end_date: str) -> pd.D
 
     if len(close_df.columns) < len(tickers):
         failed_tickers = set(tickers) - set(close_df.columns)
-        print(f"\nWarning: Failed to fetch price data for: {', '.join(failed_tickers)}")
+        logger.warning("Failed to fetch price data for: %s", ", ".join(failed_tickers))
 
     # Forward-fill to handle intermittent missing values
     return close_df.ffill()
@@ -30,7 +34,7 @@ def fetch_price_data(tickers: list[str], start_date: str, end_date: str) -> pd.D
 
 def calculate_dcf_views(config: AppConfig) -> dict[str, float]:
     """Calculates DCF-based views for a list of tickers."""
-    print("\nCalculating DCF-based views...")
+    logger.info("Calculating DCF-based views for %d tickers...", len(config.tickers))
     views = {}
     for ticker in config.tickers:
         # The DCFCalculator now handles its own internal errors and logging.
@@ -44,24 +48,35 @@ def calculate_dcf_views(config: AppConfig) -> dict[str, float]:
 
         if expected_return is not None:
             views[ticker] = expected_return
-            print(f"  - View for {ticker}: {expected_return:.2%}")
+            logger.debug("  - View for %s: %.2f%%", ticker, expected_return * 100)
 
     if not views:
-        print("No valid DCF views could be generated.")
+        logger.warning("No valid DCF views could be generated.")
+    else:
+        logger.info("Successfully generated %d DCF views.", len(views))
 
     return views
 
 
 def fetch_market_caps(tickers: list[str]) -> pd.Series:
     """Fetches market capitalization data from yfinance."""
-    print("Fetching market cap data from yfinance...")
+    logger.info("Fetching market cap data for %d tickers...", len(tickers))
     market_caps = {}
     for ticker_symbol in tickers:
         try:
             ticker_obj = yf.Ticker(ticker_symbol)
-            m_cap = ticker_obj.info.get("marketCap", None)
-            market_caps[ticker_symbol] = m_cap if m_cap is not None else 0
-        except Exception:
-            # yfinance can be flaky, so we default to 0 on any error
+            m_cap = ticker_obj.info.get("marketCap")
+            if m_cap is not None:
+                market_caps[ticker_symbol] = m_cap
+            else:
+                logger.warning("Market cap not available for %s. Defaulting to 0.", ticker_symbol)
+                market_caps[ticker_symbol] = 0
+
+        except Exception as e:
+            logger.error(
+                "Failed to fetch market cap for %s due to an error: %s. Defaulting to 0.",
+                ticker_symbol,
+                e,
+            )
             market_caps[ticker_symbol] = 0
     return pd.Series(market_caps)

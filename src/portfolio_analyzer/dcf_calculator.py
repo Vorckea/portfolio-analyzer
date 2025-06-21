@@ -1,7 +1,11 @@
+import logging
+
 import numpy as np
 import yfinance as yf
 
 from portfolio_analyzer.config import DCFConfig
+
+logger = logging.getLogger(__name__)
 
 
 class DCFCalculator:
@@ -21,7 +25,7 @@ class DCFCalculator:
 
             # Helper for clear logging
             def skip(reason):
-                print(f"  - Skipping {self.ticker_symbol}: {reason}.")
+                logger.info("Skipping %s: %s.", self.ticker_symbol, reason)
                 return False
 
             # 1. Sector validation
@@ -72,7 +76,9 @@ class DCFCalculator:
             return True
 
         except Exception as e:
-            print(f"  - Skipping {self.ticker_symbol}: Network or data error ({e})")
+            logger.exception(
+                "Skipping %s due to an unexpected error during data fetching.", self.ticker_symbol
+            )
             return False
 
     def _get_adaptive_growth_rate(self) -> float:
@@ -107,9 +113,11 @@ class DCFCalculator:
 
         # **IMPROVEMENT**: Enforce a sufficient spread between WACC and perpetual growth rate.
         if (wacc - self.config.perpetual_growth_rate) < self.config.wacc_g_spread:
-            print(
-                f"  - Skipping {self.ticker_symbol}: WACC ({wacc:.2%}) is too close to "
-                f"perpetual growth rate ({self.config.perpetual_growth_rate:.2%})."
+            logger.info(
+                "Skipping %s: WACC (%.2f%%) is too close to perpetual growth rate (%.2f%%).",
+                self.ticker_symbol,
+                wacc * 100,
+                self.config.perpetual_growth_rate * 100,
             )
             return None
 

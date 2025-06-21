@@ -180,3 +180,49 @@ def display_simulation_summary_html(result: SimulationResult) -> HTML:
     </div>
     """  # noqa: E501
     return HTML(html)
+
+
+def display_backtest_summary_html(metrics: dict) -> HTML:
+    """Return a styled HTML summary of the backtest performance metrics."""
+    style = """
+    <style>
+        .backtest-summary { display: flex; justify-content: flex-start; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .summary-card { background-color: #fdfdfd; border: 1px solid #e8e8e8; border-radius: 10px; padding: 25px; width: 550px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: #333; }
+        .summary-card h3 { margin-top: 0; margin-bottom: 20px; font-size: 1.3em; font-weight: 600; color: #1a1a1a; border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; }
+        .summary-card table { width: 100%; border-collapse: collapse; }
+        .summary-card th, .summary-card td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #f5f5f5; }
+        .summary-card th { font-weight: 600; color: #444; }
+        .summary-card td:first-child { font-weight: 500; }
+        .summary-card tbody tr:last-child td { border-bottom: none; }
+        .summary-card td { text-align: right; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; }
+    </style>
+    """  # noqa: E501
+
+    headers = "".join([f"<th>{key}</th>" for key in metrics.keys()])
+    metric_keys = metrics.get("Strategy", {}).keys()
+    rows_html = ""
+
+    for key in metric_keys:
+        rows_html += f"<tr><td>{key}</td>"
+        for header in metrics.keys():
+            value = metrics[header].get(key, 0)
+            if "Drawdown" in key or "Volatility" in key:
+                val_str = f"{value:.2%}"
+            else:
+                val_str = f"{value:.3f}"
+            rows_html += f"<td>{val_str}</td>"
+        rows_html += "</tr>"
+
+    html = f"""
+    {style}
+    <div class="backtest-summary">
+        <div class="summary-card">
+            <h3>Backtest Performance</h3>
+            <table>
+                <thead><tr><th>Metric</th>{headers}</tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+        </div>
+    </div>
+    """
+    return HTML(html)

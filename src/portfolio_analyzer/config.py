@@ -1,3 +1,5 @@
+"""Configuration module for the portfolio analyzer application."""
+
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
