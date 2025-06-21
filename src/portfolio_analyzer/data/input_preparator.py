@@ -15,6 +15,7 @@ from portfolio_analyzer.data.data_fetcher import (
     fetch_market_caps,
     fetch_price_data,
 )
+from portfolio_analyzer.utils.exceptions import DataFetchingError
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def prepare_model_inputs(config: AppConfig) -> ModelInputs:
         logger.debug("Fetched price data shape: %s", close_df.shape)
     except ValueError as e:
         logger.error("Data fetching failed with a ValueError, cannot proceed.", exc_info=True)
-        raise
+        raise DataFetchingError("Failed to fetch price data.") from e
 
     # 2. **CRITICAL**: Define the final list of tickers based on successful price data.
     final_tickers_list = close_df.columns.tolist()

@@ -58,32 +58,34 @@ class BlackLittermanModel:
         P: Optional[pd.DataFrame],
         Q: Optional[pd.Series],
         Omega: Optional[pd.DataFrame],
-    ) -> tuple:
-        """Aligns the market weights, covariance matrix, and views.
+    ) -> tuple[
+        list[str],
+        pd.DataFrame,
+        pd.Series,
+        Optional[pd.DataFrame],
+        Optional[pd.Series],
+        Optional[pd.DataFrame],
+    ]:
+        """Aligns all input matrices and series to a common asset universe.
 
-        This method ensures that the market weights and covariance matrix
-        have the same tickers, and aligns the views accordingly.
+        Ensures that all pandas objects (market weights, covariance, and view
+        matrices) share the same asset order and removes assets that are not
+        present across all inputs.
 
         Args:
-            w_mkt (pd.Series): Market weights of the assets, indexed by tickers.
-            cov_matrix (pd.DataFrame): Covariance matrix of asset returns, indexed by tickers.
-            P (Optional[pd.DataFrame]): Matrix of views, where each row corresponds to a
-            Q (Optional[pd.Series]): Vector of views, where each element corresponds to a
-            view in P.
-            Omega (Optional[pd.DataFrame]): Diagonal covariance matrix of the views,
-            where the diagonal elements correspond to the uncertainty of each view.
-
-        Raises:
-            ValueError: If there are no common tickers between market weights and covariance matrix.
+            w_mkt: A series of market-cap weights for each asset.
+            cov_matrix: The covariance matrix of asset returns.
+            P: The view matrix, linking assets to views.
+            Q: The view vector, containing the expected returns for each view.
+            Omega: The covariance matrix of view uncertainties.
 
         Returns:
-            tuple: A tuple containing:
-                - List of aligned tickers.
-                - Aligned covariance matrix (pd.DataFrame).
-                - Aligned market weights (pd.Series).
-                - Aligned views matrix (pd.DataFrame or None).
-                - Aligned views vector (pd.Series or None).
-                - Aligned Omega matrix (pd.DataFrame or None).
+            A tuple containing the aligned inputs:
+            - A list of common asset tickers.
+            - The aligned covariance matrix.
+            - The aligned and re-normalized market weights.
+            - The aligned P, Q, and Omega matrices, or None if no views
+              were provided.
 
         """
         asset_universe = cov_matrix.index.intersection(w_mkt.index).sort_values()

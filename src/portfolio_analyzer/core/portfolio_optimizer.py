@@ -18,6 +18,7 @@ from portfolio_analyzer.core.objectives import (
     portfolio_return,
     portfolio_volatility,
 )
+from portfolio_analyzer.utils.exceptions import InputAlignmentError, OptimizationError
 
 
 @dataclass
@@ -45,7 +46,9 @@ class PortfolioOptimizer:
         if not mean_returns.index.equals(cov_matrix.index):
             common_tickers = sorted(list(set(mean_returns.index) & set(cov_matrix.index)))
             if not common_tickers:
-                raise ValueError("Mean returns and covariance matrix have no common tickers.")
+                raise InputAlignmentError(
+                    "Mean returns and covariance matrix have no common tickers."
+                )
 
             self.mean_returns = mean_returns.loc[common_tickers]
             self.cov_matrix = cov_matrix.loc[common_tickers, common_tickers]
@@ -59,7 +62,6 @@ class PortfolioOptimizer:
             self.tickers = list(mean_returns.index)
 
         self.config = config
-        # self.latest_result: Optional[PortfolioResult] = None
 
     def _create_result_from_weights(self, weights: np.ndarray) -> PortfolioResult:
         """Helper to create a PortfolioResult object from a given set of weights."""
@@ -126,14 +128,16 @@ class PortfolioOptimizer:
         )
 
         if not opt_result.success:
-            return PortfolioResult(success=False)
+            raise OptimizationError(
+                f"Portfolio optimization failed to converge: {opt_result.message}"
+            )
 
         return self._create_result_from_weights(opt_result.x)
 
     def calculate_efficient_frontier(
         self, num_points: int = 100
     ) -> tuple[pd.DataFrame, PortfolioResult, PortfolioResult]:
-        """Calculates the efficient frontier.
+        """Calculate the efficient frontier.
 
         Returns a tuple containing:
         - A DataFrame with frontier points (Return, Volatility, Sharpe).
@@ -155,14 +159,14 @@ class PortfolioOptimizer:
             constraints=min_vol_constraints,
         )
         if not min_vol_opt.success:
-            raise RuntimeError("Could not find the minimum volatility portfolio.")
+            raise OptimizationError("Could not find the minimum volatility portfolio.")
         min_vol_result = self._create_result_from_weights(min_vol_opt.x)
 
         # 2. Find the Max Sharpe Ratio portfolio directly using the optimizer
         # We use lambda_reg=0 to find the theoretical max Sharpe on the frontier
         max_sharpe_result = self.optimize(lambda_reg=0.0)
         if not max_sharpe_result or not max_sharpe_result.success:
-            raise RuntimeError("Could not find the maximum Sharpe ratio portfolio.")
+            raise OptimizationError("Could not find the maximum Sharpe ratio portfolio.")
 
         # 3. Determine range of returns for the frontier plot
         min_return_log = min_vol_result.log_return
@@ -192,7 +196,7 @@ class PortfolioOptimizer:
                 frontier_portfolios.append({"Return": target_return, "Volatility": opt.fun})
 
         if not frontier_portfolios:
-            raise RuntimeError("Could not calculate any frontier points.")
+            raise OptimizationError("Could not calculate any points for the efficient frontier.")
 
         frontier_df = pd.DataFrame(frontier_portfolios)
         log_risk_free_rate = np.log(1 + self.config.risk_free_rate)
