@@ -36,6 +36,15 @@ class DistributionModel(Enum):
 
 
 @dataclass
+class BacktestingConfig:
+    """Parameters for the historical backtest."""
+
+    initial_capital: float = 100000.0
+    rebalance_frequency: str = "3M"  # e.g., '1M', '3M', '1Y'
+    lookback_period_days: int = 3 * 365  # How much history to use for each optimization
+
+
+@dataclass
 class MonteCarloConfig:
     initial_value: float = 1_000_000
     num_simulations: int = 100_000
@@ -110,3 +119,10 @@ class AppConfig:
     black_litterman: BlackLittermanConfig = field(default_factory=BlackLittermanConfig)
     monte_carlo: MonteCarloConfig = field(default_factory=MonteCarloConfig)
     dcf: DCFConfig = field(default_factory=DCFConfig)
+    backtesting: BacktestingConfig = field(default_factory=BacktestingConfig)
+
+    def model_copy(self, deep: bool = True) -> "AppConfig":
+        """Create a deep copy of the configuration model."""
+        from copy import deepcopy
+
+        return deepcopy(self) if deep else self.__class__(**self.__dict__)
