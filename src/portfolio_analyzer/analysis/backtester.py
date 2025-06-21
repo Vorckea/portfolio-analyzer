@@ -44,8 +44,8 @@ class Backtester:
     def _prepare_inputs_for_date(
         self, log_returns_slice: pd.DataFrame
     ) -> Tuple[pd.Series, pd.DataFrame]:
-        """
-        Prepares model inputs using a slice of historical log returns.
+        """Prepare model inputs using a slice of historical log returns.
+
         This is a simplified version of the logic in `prepare_model_inputs`
         to demonstrate the efficient, in-memory pattern.
         """
@@ -65,8 +65,7 @@ class Backtester:
         return mean_returns, cov_matrix
 
     def run(self, benchmark_ticker: Optional[str] = None) -> Tuple[pd.DataFrame, dict]:
-        """
-        Execute the backtest over the specified historical period.
+        """Execute the backtest over the specified historical period.
 
         This version is optimized to fetch all data once, avoiding repeated API calls
         during the rebalancing loop.
