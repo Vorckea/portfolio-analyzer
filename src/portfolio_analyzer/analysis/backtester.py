@@ -79,6 +79,9 @@ class Backtester:
                   strategy and the benchmark.
 
         """
+        if not isinstance(self.config, AppConfig):
+            raise TypeError("config must be an instance of AppConfig")
+
         logger.info("--- Running Optimized Backtest for '%s' ---", self.strategy_name)
 
         # 1. Determine the full date range needed, including the lookback period

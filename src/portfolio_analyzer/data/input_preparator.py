@@ -26,6 +26,79 @@ from portfolio_analyzer.utils.exceptions import DataFetchingError
 logger = logging.getLogger(__name__)
 
 
+def _calculate_annualized_covariance(
+    log_returns: pd.DataFrame, trading_days: int = 252
+) -> pd.DataFrame:
+    """Calculate the annualized covariance matrix using Ledoit-Wolf shrinkage."""
+    lw = LedoitWolf()
+    lw.fit(log_returns)
+    cov_matrix = pd.DataFrame(
+        lw.covariance_ * trading_days,
+        index=log_returns.columns,
+        columns=log_returns.columns,
+    )
+    logger.debug("Calculated annualized covariance matrix shape: %s", cov_matrix.shape)
+    return cov_matrix
+
+
+def _apply_black_litterman_model(
+    hist_mean_returns: pd.Series,
+    cov_matrix: pd.DataFrame,
+    market_cap_weights: pd.Series,
+    config: AppConfig,
+    dcf_views: Optional[Dict[str, float]] = None,
+) -> Tuple[pd.Series, Optional[pd.Series]]:
+    """Apply the Black-Litterman model to blend historical and view-based returns."""
+    if market_cap_weights is not None and not market_cap_weights.empty:
+        logger.info("Attempting to run Black-Litterman model...")
+        try:
+            P_views, Q_views, Omega_df = None, None, None
+            if dcf_views:
+                logger.info("Constructing Black-Litterman views from DCF estimates...")
+                view_tickers = list(dcf_views.keys())
+                aligned_view_tickers = [t for t in view_tickers if t in hist_mean_returns.index]
+                if aligned_view_tickers:
+                    Q_views = pd.Series({t: dcf_views[t] for t in aligned_view_tickers})
+                    P_views = pd.DataFrame(
+                        0.0, index=Q_views.index, columns=hist_mean_returns.index
+                    )
+                    for ticker in Q_views.index:
+                        P_views.loc[ticker, ticker] = 1.0
+                    view_cov = P_views @ cov_matrix @ P_views.T
+                    omega_diag_views = np.diag(view_cov) * config.black_litterman.tau
+                    Omega_df = pd.DataFrame(
+                        np.diag(omega_diag_views), index=Q_views.index, columns=Q_views.index
+                    )
+                    logger.info("Successfully constructed %d views.", len(Q_views))
+
+            bl_model = BlackLittermanModel(
+                tau=config.black_litterman.tau,
+                delta=config.black_litterman.delta,
+                w_mkt=market_cap_weights,
+                cov_matrix=cov_matrix,
+                P=P_views,
+                Q=Q_views,
+                Omega=Omega_df,
+            )
+            posterior_returns = bl_model.get_posterior_returns()
+            implied_equilibrium_returns = bl_model.get_implied_equilibrium_returns()
+
+            if posterior_returns is not None:
+                logger.info("Successfully applied Black-Litterman model.")
+                final_mean_returns = posterior_returns
+                return final_mean_returns, implied_equilibrium_returns
+            elif implied_equilibrium_returns is not None:
+                logger.warning(
+                    "BL model did not produce posterior returns. Using implied equilibrium returns."
+                )
+                final_mean_returns = implied_equilibrium_returns
+                return final_mean_returns, implied_equilibrium_returns
+
+        except Exception:
+            logger.exception("Black-Litterman model failed. Reverting to historical returns.")
+            return hist_mean_returns.copy(), None
+
+
 def build_model_inputs(
     log_returns: pd.DataFrame,
     config: AppConfig,
@@ -60,70 +133,21 @@ def build_model_inputs(
         alpha=config.mean_shrinkage_alpha,
         trading_days=config.trading_days_per_year,
     )
+    logger.debug("Calculated historical mean returns shape: %s", hist_mean_returns.shape)
 
-    # 2. Calculate annualized covariance matrix using Ledoit-Wolf shrinkage
-    logger.info("Calculating annualized covariance matrix using Ledoit-Wolf shrinkage...")
-    lw = LedoitWolf()
-    lw.fit(log_returns)
-    cov_matrix_annualized = pd.DataFrame(
-        lw.covariance_ * config.trading_days_per_year,
-        index=log_returns.columns,
-        columns=log_returns.columns,
+    # 2. Calculate annualized covariance matrix
+    cov_matrix_annualized = _calculate_annualized_covariance(
+        log_returns, config.trading_days_per_year
     )
-    logger.debug("Calculated annualized covariance matrix shape: %s", cov_matrix_annualized.shape)
 
     # 3. Initialize returns and run Black-Litterman model if applicable
-    final_mean_returns = hist_mean_returns.copy()
-    implied_equilibrium_returns = None
-
-    if market_cap_weights is not None and not market_cap_weights.empty:
-        logger.info("Attempting to run Black-Litterman model...")
-        try:
-            P_views, Q_views, Omega_df = None, None, None
-            if dcf_views:
-                logger.info("Constructing Black-Litterman views from DCF estimates...")
-                view_tickers = list(dcf_views.keys())
-                aligned_view_tickers = [t for t in view_tickers if t in log_returns.columns]
-                if aligned_view_tickers:
-                    Q_views = pd.Series({t: dcf_views[t] for t in aligned_view_tickers})
-                    P_views = pd.DataFrame(0.0, index=Q_views.index, columns=log_returns.columns)
-                    for ticker in Q_views.index:
-                        P_views.loc[ticker, ticker] = 1.0
-                    view_cov = P_views @ cov_matrix_annualized @ P_views.T
-                    omega_diag_views = np.diag(view_cov) * config.black_litterman.tau
-                    Omega_df = pd.DataFrame(
-                        np.diag(omega_diag_views), index=Q_views.index, columns=Q_views.index
-                    )
-                    logger.info("Successfully constructed %d views.", len(Q_views))
-
-            bl_model = BlackLittermanModel(
-                tau=config.black_litterman.tau,
-                delta=config.black_litterman.delta,
-                w_mkt=market_cap_weights,
-                cov_matrix=cov_matrix_annualized,
-                P=P_views,
-                Q=Q_views,
-                Omega=Omega_df,
-            )
-            posterior_returns = bl_model.get_posterior_returns()
-            implied_equilibrium_returns = bl_model.get_implied_equilibrium_returns()
-
-            if posterior_returns is not None:
-                logger.info("Successfully applied Black-Litterman model.")
-                final_mean_returns = posterior_returns
-            elif implied_equilibrium_returns is not None:
-                logger.warning(
-                    "BL model did not produce posterior returns. Using implied equilibrium returns."
-                )
-                final_mean_returns = implied_equilibrium_returns
-
-        except Exception:
-            logger.exception("Black-Litterman model failed. Reverting to historical returns.")
-            final_mean_returns = hist_mean_returns
-    else:
-        logger.info(
-            "No market cap weights provided; using historical returns as the final estimate."
-        )
+    final_mean_returns, implied_equilibrium_returns = _apply_black_litterman_model(
+        hist_mean_returns,
+        cov_matrix_annualized,
+        market_cap_weights,
+        config,
+        dcf_views,
+    )
 
     # 4. Blend final returns with historical momentum
     if config.black_litterman.momentum_blend_weight > 0:
