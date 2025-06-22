@@ -1,25 +1,25 @@
 # Portfolio Analyzer
 
-This project provides a toolkit for advanced portfolio optimization and risk analysis using modern financial modeling techniques like Black-Litterman and Monte Carlo simulation.
+Portfolio Analyzer is a modular toolkit for advanced portfolio construction, optimization, and risk analytics. It leverages state-of-the-art quantitative finance techniques, including Black-Litterman blending, robust covariance estimation, and Monte Carlo simulation, all accessible through an interactive Jupyter notebook workflow.
 
-## Features
+## Key Features
 
-- **Data Pipeline**: Fetches and processes market data for specified assets.
-- **Robust Estimation**: Uses EWMA and Ledoit-Wolf shrinkage for stable covariance matrices.
-- **Black-Litterman Model**: Blends market equilibrium returns with user-defined views.
-- **Portfolio Optimization**: Maximizes Sharpe Ratio with constraints and L2 regularization.
-- **Risk Analysis**: Simulates future portfolio performance using Monte Carlo methods.
-- **Interactive Analysis**: Jupyter notebook workflow for step-by-step portfolio construction, optimization, and backtesting.
-- **Visualization**: Includes efficient frontier, correlation heatmaps, and backtest result plots.
-- **Backtesting**: Historical strategy evaluation with rolling rebalancing and benchmark comparison.
+- **Automated Data Pipeline**: Fetches and processes historical prices and market capitalizations for user-specified assets.
+- **Robust Statistical Estimation**: Implements EWMA and Ledoit-Wolf shrinkage for stable mean and covariance estimates.
+- **Black-Litterman Integration**: Blends equilibrium returns with forward-looking views, including DCF-based signals.
+- **Flexible Portfolio Optimization**: Maximizes risk-adjusted return (Sharpe Ratio) with support for constraints and L2 regularization.
+- **Comprehensive Risk Analysis**: Projects future portfolio outcomes using Monte Carlo simulation with configurable distributional assumptions.
+- **Interactive Workflow**: Step-by-step analysis, optimization, and backtesting in [notebooks/portfolio_analysis.ipynb](notebooks/portfolio_analysis.ipynb).
+- **Advanced Visualization**: Correlation heatmaps, network graphs, efficient frontier, and detailed backtest reporting.
+- **Historical Backtesting**: Evaluates strategy performance with rolling rebalancing and benchmark comparison.
 
-## Setup and Installation
+## Installation
 
-This project uses Poetry for dependency management.
+Portfolio Analyzer uses [Poetry](https://python-poetry.org/) for dependency management.
 
 1. **Clone the repository:**
     ```bash
-    git clone <your-repository-url>
+    git clone https://github.com/Vorckea/portfolio-analyzer.git
     cd portfolio-analyzer
     ```
 
@@ -30,7 +30,7 @@ This project uses Poetry for dependency management.
 
 ## Usage
 
-The main analysis workflow is in [notebooks/portfolio_analysis.ipynb](notebooks/portfolio_analysis.ipynb).
+The primary workflow is provided in [notebooks/portfolio_analysis.ipynb](notebooks/portfolio_analysis.ipynb):
 
 1. **Activate the virtual environment:**
     ```bash
@@ -42,8 +42,17 @@ The main analysis workflow is in [notebooks/portfolio_analysis.ipynb](notebooks/
     jupyter lab
     ```
 
-3. Open and run the cells in [notebooks/portfolio_analysis.ipynb](notebooks/portfolio_analysis.ipynb).
+3. Open and execute the cells in [notebooks/portfolio_analysis.ipynb](notebooks/portfolio_analysis.ipynb) to perform configuration, data preparation, optimization, simulation, and backtesting.
 
 ## Configuration
 
-All key parameters (tickers, date ranges, model hyperparameters) can be adjusted in [src/portfolio_analyzer/config.py](src/portfolio_analyzer/config.py).
+All key parameters (tickers, date ranges, model hyperparameters, and user-defined views) are managed centrally in [src/portfolio_analyzer/config.py](src/portfolio_analyzer/config.py).
+
+## Documentation & Support
+
+- For detailed module documentation, see inline docstrings and comments in the [src/portfolio_analyzer](src/portfolio_analyzer) directory.
+- For troubleshooting or feature requests, please open an issue on [GitHub](https://github.com/Vorckea/portfolio-analyzer/issues).
+
+---
+
+*This project is intended for research and educational purposes. Please review and validate all results before using in a production or investment context.*
