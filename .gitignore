@@ -21,3 +21,7 @@ poetry.lock
 
 # Ruff
 .ruff_cache/
+
+# Logs
+*.log
+logs/
