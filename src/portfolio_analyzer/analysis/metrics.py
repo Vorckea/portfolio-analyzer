@@ -81,3 +81,34 @@ def calculate_relative_metrics(
     )
 
     return {"Alpha": alpha, "Beta": beta}
+
+
+def value_at_risk(series: pd.Series, percentile: float = 5.0) -> float:
+    """Calculate the Value at Risk (VaR) at a given percentile of final values.
+
+    Args:
+        series (pd.Series): A series of simulation outcomes or portfolio values.
+        percentile (float): The percentile for VaR calculation (e.g., 5.0 for 5th percentile value).
+
+    Returns:
+        float: The value at the specified percentile.
+
+    """
+    return np.percentile(series, percentile)
+
+
+def conditional_value_at_risk(series: pd.Series, percentile: float = 5.0) -> float:
+    """Calculate the Conditional Value at Risk (CVaR).
+
+    CVaR is the average of the values that are less than or equal to the VaR.
+
+    Args:
+        series (pd.Series): A series of simulation outcomes or portfolio values.
+        percentile (float): The percentile for the VaR threshold.
+
+    Returns:
+        float: The Conditional Value at Risk.
+
+    """
+    var_threshold = value_at_risk(series, percentile)
+    return series[series <= var_threshold].mean()

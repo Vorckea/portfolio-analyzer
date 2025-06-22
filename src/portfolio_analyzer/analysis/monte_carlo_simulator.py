@@ -1,8 +1,10 @@
 from typing import Dict, Tuple
 
 import numpy as np
+import pandas as pd
 from scipy.stats import multivariate_normal, multivariate_t
 
+from portfolio_analyzer.analysis.metrics import conditional_value_at_risk, value_at_risk
 from portfolio_analyzer.config import AppConfig
 from portfolio_analyzer.data.models import PortfolioResult, SimulationResult
 
@@ -115,13 +117,13 @@ class MonteCarloSimulator:
 
         Internal helper for the `run` method.
         """
-        final_values = sim_paths[-1, :]
+        final_values = pd.Series(sim_paths[-1, :], name="Final Value")
         stats = {
-            "mean": np.mean(final_values),
-            "median": np.median(final_values),
-            "std_dev": np.std(final_values),
-            "var_95": np.percentile(final_values, 5),
-            "cvar_95": np.mean(final_values[final_values <= np.percentile(final_values, 5)]),
-            "prob_breakeven": np.mean(final_values > self.mc_config.initial_value),
+            "mean": final_values.mean(),
+            "median": final_values.median(),
+            "std_dev": final_values.std(),
+            "var_95": value_at_risk(final_values, percentile=5.0),
+            "cvar_95": conditional_value_at_risk(final_values, percentile=5.0),
+            "prob_breakeven": (final_values > self.mc_config.initial_value).mean(),
         }
-        return stats, final_values
+        return stats, final_values.values
