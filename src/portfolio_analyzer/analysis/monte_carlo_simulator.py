@@ -125,5 +125,7 @@ class MonteCarloSimulator:
             "var_95": value_at_risk(final_values, percentile=5.0),
             "cvar_95": conditional_value_at_risk(final_values, percentile=5.0),
             "prob_breakeven": (final_values > self.mc_config.initial_value).mean(),
+            "ci_5": np.percentile(final_values, 5),
+            "ci_95": np.percentile(final_values, 95),
         }
         return stats, final_values.values

@@ -67,15 +67,15 @@ def display_simulation_summary_html(result: SimulationResult) -> HTML:
     <div class="metrics-grid">
         <div class="metric">
             <span class="metric-label">5th Percentile</span>
-            <span class="metric-value">${get_stat("ci_5")}</span>
+            <span class="metric-value">{get_stat("ci_5")}</span>
         </div>
         <div class="metric">
             <span class="metric-label">Median Value</span>
-            <span class="metric-value">${get_stat("median")}</span>
+            <span class="metric-value">{get_stat("median")}</span>
         </div>
         <div class="metric">
             <span class="metric-label">95th Percentile</span>
-            <span class="metric-value">${get_stat("ci_95")}</span>
+            <span class="metric-value">{get_stat("ci_95")}</span>
         </div>
     </div>
     """
