@@ -135,7 +135,7 @@ class BlackLittermanModel:
             pd.Series: Implied equilibrium returns, indexed by tickers.
 
         """
-        pi = self.delta * self.aligned_cov_matrix.dot(self.aligned_w_mkt)
+        pi = self.delta * self.aligned_cov_matrix @ self.aligned_w_mkt
         return pi
 
     def get_posterior_returns(self) -> Optional[pd.Series]:
