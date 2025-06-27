@@ -14,13 +14,15 @@ import pandas as pd
 from sklearn.covariance import LedoitWolf
 
 from portfolio_analyzer.config import AppConfig
-from portfolio_analyzer.core.black_litterman import BlackLittermanModel
 from portfolio_analyzer.data.data_fetcher import (
     calculate_dcf_views,
     fetch_market_caps,
     fetch_price_data,
 )
 from portfolio_analyzer.data.models import ModelInputs
+from portfolio_analyzer.return_estimator.black_litterman_return import BlackLittermanReturn
+from portfolio_analyzer.return_estimator.blended_return import BlendedReturn
+from portfolio_analyzer.return_estimator.ewma_return import EWMAReturn
 from portfolio_analyzer.utils.exceptions import DataFetchingError
 
 logger = logging.getLogger(__name__)
@@ -42,61 +44,56 @@ def _calculate_annualized_covariance(
 
 
 def _apply_black_litterman_model(
-    hist_mean_returns: pd.Series,
-    cov_matrix: pd.DataFrame,
+    log_returns: pd.DataFrame,
+    risk_free_rate: float,
+    risk_aversion: float,
+    covariance_matrix: pd.DataFrame,
     market_cap_weights: pd.Series,
-    config: AppConfig,
-    dcf_views: Optional[Dict[str, float]] = None,
-) -> Tuple[pd.Series, Optional[pd.Series]]:
-    """Apply the Black-Litterman model to blend historical and view-based returns."""
-    if market_cap_weights is not None and not market_cap_weights.empty:
-        logger.info("Attempting to run Black-Litterman model...")
-        try:
-            P_views, Q_views, Omega_df = None, None, None
-            if dcf_views:
-                logger.info("Constructing Black-Litterman views from DCF estimates...")
-                view_tickers = list(dcf_views.keys())
-                aligned_view_tickers = [t for t in view_tickers if t in hist_mean_returns.index]
-                if aligned_view_tickers:
-                    Q_views = pd.Series({t: dcf_views[t] for t in aligned_view_tickers})
-                    P_views = pd.DataFrame(
-                        0.0, index=Q_views.index, columns=hist_mean_returns.index
-                    )
-                    for ticker in Q_views.index:
-                        P_views.loc[ticker, ticker] = 1.0
-                    view_cov = P_views @ cov_matrix @ P_views.T
-                    omega_diag_views = np.diag(view_cov) * config.black_litterman.tau
-                    Omega_df = pd.DataFrame(
-                        np.diag(omega_diag_views), index=Q_views.index, columns=Q_views.index
-                    )
-                    logger.info("Successfully constructed %d views.", len(Q_views))
+    tau: float,
+    dcf_views: dict[str, float] | None = None,
+    config: AppConfig | None = None,
+) -> BlackLittermanReturn:
+    if market_cap_weights is None or market_cap_weights.empty:
+        return None
 
-            bl_model = BlackLittermanModel(
-                tau=config.black_litterman.tau,
-                delta=config.black_litterman.delta,
-                w_mkt=market_cap_weights,
-                cov_matrix=cov_matrix,
-                P=P_views,
-                Q=Q_views,
-                Omega=Omega_df,
-            )
-            posterior_returns = bl_model.get_posterior_returns()
-            implied_equilibrium_returns = bl_model.get_implied_equilibrium_returns()
+    log_returns = log_returns.sort_index(axis=1)
+    covariance_matrix = covariance_matrix.loc[log_returns.columns, log_returns.columns]
+    market_cap_weights = market_cap_weights.reindex(log_returns.columns).fillna(0.0)
 
-            if posterior_returns is not None:
-                logger.info("Successfully applied Black-Litterman model.")
-                final_mean_returns = posterior_returns
-                return final_mean_returns, implied_equilibrium_returns
-            elif implied_equilibrium_returns is not None:
-                logger.warning(
-                    "BL model did not produce posterior returns. Using implied equilibrium returns."
-                )
-                final_mean_returns = implied_equilibrium_returns
-                return final_mean_returns, implied_equilibrium_returns
+    if dcf_views is None or not dcf_views:
+        return None
 
-        except Exception:
-            logger.exception("Black-Litterman model failed. Reverting to historical returns.")
-            return hist_mean_returns.copy(), None
+    assets_in_view, view_vector, view_confidence = None, None, None
+    view_assets = sorted(dcf_views.keys())
+    assets_in_view = pd.DataFrame(0, index=view_assets, columns=log_returns.columns)
+    for asset in view_assets:
+        if asset in assets_in_view.columns:
+            assets_in_view.loc[asset, asset] = 1
+
+    view_vector = pd.Series(
+        {asset: float(dcf_views[asset]) for asset in assets_in_view.index}
+    ).sort_index()
+
+    view_variance = (
+        tau * covariance_matrix.loc[assets_in_view.index, assets_in_view.index].values.diagonal()
+    )
+    view_confidence = pd.DataFrame(
+        np.diag(view_variance), index=assets_in_view.index, columns=assets_in_view.index
+    ).sort_index()
+
+    bl_model = BlackLittermanReturn(
+        log_returns=log_returns,
+        risk_free_rate=risk_free_rate,
+        risk_aversion=risk_aversion,
+        market_cap_weights=market_cap_weights,
+        tau=tau,
+        assets_in_view=assets_in_view,
+        view_confidence=view_confidence,
+        view_vector=view_vector,
+        config=config,
+    )
+
+    return bl_model
 
 
 def build_model_inputs(
@@ -127,12 +124,16 @@ def build_model_inputs(
 
     """
     # 1. Calculate historical mean returns with EWMA and shrinkage
-    hist_mean_returns = _ewma_shrunk_returns(
-        log_returns,
+
+    ewma = EWMAReturn(
+        log_returns=log_returns,
         span=config.ewma_span,
-        alpha=config.mean_shrinkage_alpha,
         trading_days=config.trading_days_per_year,
+        shrinkage_factor=config.mean_shrinkage_alpha,
     )
+
+    hist_mean_returns = ewma.get_shrinked_ewma_returns()
+
     logger.debug("Calculated historical mean returns shape: %s", hist_mean_returns.shape)
 
     # 2. Calculate annualized covariance matrix
@@ -141,28 +142,27 @@ def build_model_inputs(
     )
 
     # 3. Initialize returns and run Black-Litterman model if applicable
-    final_mean_returns, implied_equilibrium_returns = _apply_black_litterman_model(
-        hist_mean_returns,
-        cov_matrix_annualized,
-        market_cap_weights,
-        config,
-        dcf_views,
+    bl_model = _apply_black_litterman_model(
+        log_returns=log_returns,
+        risk_free_rate=config.risk_free_rate,
+        risk_aversion=config.black_litterman.delta,
+        covariance_matrix=cov_matrix_annualized,
+        market_cap_weights=market_cap_weights,
+        tau=config.black_litterman.tau,
+        dcf_views=dcf_views,
+        config=config,
     )
 
-    # 4. Blend final returns with historical momentum
-    if config.black_litterman.momentum_blend_weight > 0:
-        logger.info(
-            "Blending final returns with %.0f%% momentum.",
-            config.black_litterman.momentum_blend_weight * 100,
-        )
-        common_idx = final_mean_returns.index.intersection(hist_mean_returns.index)
-        final_mean_returns_aligned = final_mean_returns.loc[common_idx]
-        hist_mean_returns_aligned = hist_mean_returns.loc[common_idx]
+    implied_equilibrium_returns = bl_model.get_implied_equilibrium_returns()
 
-        final_mean_returns = (
-            (1 - config.black_litterman.momentum_blend_weight) * final_mean_returns_aligned
-            + config.black_litterman.momentum_blend_weight * hist_mean_returns_aligned
-        )
+    blended_returns = BlendedReturn(
+        [
+            (bl_model, 1 - config.black_litterman.momentum_blend_weight),
+            (ewma, config.black_litterman.momentum_blend_weight),
+        ],
+    )
+
+    final_mean_returns = blended_returns.get_returns()
 
     # 5. Final alignment and packaging
     common_tickers = sorted(
@@ -271,17 +271,3 @@ def _calculate_log_returns(close_df: pd.DataFrame) -> pd.DataFrame:
     Internal helper function.
     """
     return np.log(close_df / close_df.shift(1)).dropna()
-
-
-def _ewma_shrunk_returns(
-    log_returns: pd.DataFrame, span: int, alpha: float, trading_days: int
-) -> pd.Series:
-    """Calculates annualized EWMA returns and applies shrinkage."""
-    ewma = log_returns.ewm(span=span).mean().iloc[-1] * trading_days
-    return _shrink_mean(ewma, alpha)
-
-
-def _shrink_mean(returns: pd.Series, alpha: float) -> pd.Series:
-    """Shrinks returns towards the grand mean."""
-    grand_mean = returns.mean()
-    return (1 - alpha) * returns + alpha * grand_mean
