@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from portfolio_analyzer.config import AppConfig
+from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
 
 

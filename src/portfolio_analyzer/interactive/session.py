@@ -4,7 +4,7 @@ from IPython.display import display
 from matplotlib import pyplot as plt
 
 from portfolio_analyzer.analysis.monte_carlo_simulator import MonteCarloSimulator
-from portfolio_analyzer.config import AppConfig
+from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.core.portfolio_optimizer import PortfolioOptimizer
 from portfolio_analyzer.data import models as ip
 from portfolio_analyzer.data.models import PortfolioResult
@@ -34,7 +34,13 @@ class PortfolioAnalysisSession:
 
     """
 
-    def __init__(self, config: AppConfig, model_inputs: ip.ModelInputs):
+    def __init__(
+        self,
+        config: AppConfig,
+        model_inputs: ip.ModelInputs,
+        optimizer: Optional[PortfolioOptimizer] = None,
+        mc_simulator: Optional[MonteCarloSimulator] = None,
+    ):
         """Initialize the PortfolioAnalysisSession.
 
         Args:
@@ -46,16 +52,20 @@ class PortfolioAnalysisSession:
         self.model_inputs = model_inputs
         self.latest_result: Optional[PortfolioResult] = None
 
-        if not self.model_inputs.mean_returns.empty:
-            self.optimizer = PortfolioOptimizer(
+        self.optimizer = optimizer or (
+            PortfolioOptimizer(
                 mean_returns=self.model_inputs.mean_returns,
                 cov_matrix=self.model_inputs.cov_matrix,
                 config=self.config,
             )
-            self.mc_simulator = MonteCarloSimulator(self.config)
-        else:
-            self.optimizer = None
-            self.mc_simulator = None
+            if not self.model_inputs.mean_returns.empty
+            else None
+        )
+        self.mc_simulator = mc_simulator or (
+            MonteCarloSimulator(config=self.config)
+            if not self.model_inputs.mean_returns.empty
+            else None
+        )
 
     def run_interactive_optimization(self, lambda_reg: float):
         """Run optimization and displays results for interactive use.

@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
-from portfolio_analyzer.config import AppConfig
+from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.core import objectives
 from portfolio_analyzer.core.objectives import (
     negative_sharpe_ratio,
@@ -24,12 +24,7 @@ from portfolio_analyzer.utils.exceptions import InputAlignmentError, Optimizatio
 class PortfolioOptimizer:
     """Performs mean-variance portfolio optimization."""
 
-    def __init__(
-        self,
-        mean_returns: pd.Series,
-        cov_matrix: pd.DataFrame,
-        config: AppConfig,
-    ):
+    def __init__(self, mean_returns: pd.Series, cov_matrix: pd.DataFrame, config: AppConfig):
         """Initialize the PortfolioOptimizer.
 
         Aligns tickers between mean_returns and cov_matrix to ensure consistency.
@@ -37,7 +32,6 @@ class PortfolioOptimizer:
         Args:
             mean_returns (pd.Series): A series of mean expected returns for each asset.
             cov_matrix (pd.DataFrame): The covariance matrix of asset returns.
-            config (AppConfig): The application configuration object.
 
         Raises:
             InputAlignmentError: If the inputs have no common tickers.

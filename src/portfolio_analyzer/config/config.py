@@ -226,6 +226,23 @@ class AppConfig:
     dcf: DCFConfig = field(default_factory=DCFConfig)
     backtesting: BacktestingConfig = field(default_factory=BacktestingConfig)
 
+    _instance: "AppConfig" = field(default=None, init=False, repr=False)
+
+    @classmethod
+    def get_instance(cls) -> "AppConfig":
+        """Get the singleton instance of the AppConfig.
+
+        Returns:
+            AppConfig: The application configuration.
+        """
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    def set_instance(cls, config: "AppConfig"):
+        """Explicitly set the singleton instance (useful for testing or custom configs)."""
+        cls._instance = config
+
     def model_copy(self, deep: bool = True) -> "AppConfig":
         """Create a deep copy of the AppConfig instance.
 

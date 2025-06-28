@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from sklearn.covariance import LedoitWolf
 
-from portfolio_analyzer.config import AppConfig
+from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.data.data_fetcher import (
     calculate_dcf_views,
     fetch_market_caps,

@@ -17,7 +17,7 @@ from portfolio_analyzer.analysis.metrics import (
     calculate_performance_summary,
     calculate_relative_metrics,
 )
-from portfolio_analyzer.config import AppConfig
+from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.core.portfolio_optimizer import PortfolioOptimizer
 from portfolio_analyzer.data.data_fetcher import fetch_price_data
 
@@ -28,12 +28,7 @@ class Backtester:
     """Runs historical backtests of portfolio optimization strategies."""
 
     def __init__(self, config: AppConfig):
-        """Initialize the Backtester.
-
-        Args:
-            config (AppConfig): The application configuration object.
-
-        """
+        """Initialize the Backtester."""
         self.config = config
         self.strategy_name = "Mean-Variance Optimization"
 

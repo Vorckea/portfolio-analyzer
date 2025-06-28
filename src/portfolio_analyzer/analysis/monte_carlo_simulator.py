@@ -5,7 +5,7 @@ import pandas as pd
 from scipy.stats import multivariate_normal, multivariate_t
 
 from portfolio_analyzer.analysis.metrics import conditional_value_at_risk, value_at_risk
-from portfolio_analyzer.config import AppConfig
+from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.data.models import PortfolioResult, SimulationResult
 
 
@@ -13,12 +13,7 @@ class MonteCarloSimulator:
     """Runs Monte Carlo simulations to project portfolio performance."""
 
     def __init__(self, config: AppConfig):
-        """Initialize the MonteCarloSimulator.
-
-        Args:
-            config (AppConfig): The application configuration object.
-
-        """
+        """Initialize the MonteCarloSimulator."""
         self.mc_config = config.monte_carlo
         self.trading_days = config.trading_days_per_year
 
