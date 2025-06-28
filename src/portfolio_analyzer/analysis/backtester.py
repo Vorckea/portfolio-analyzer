@@ -19,6 +19,7 @@ from portfolio_analyzer.analysis.metrics import (
 )
 from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.core.portfolio_optimizer import PortfolioOptimizer
+from portfolio_analyzer.data.data_fetcher import DataFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +31,13 @@ class Backtester:
         self,
         config: AppConfig,
         optimizer_cls: PortfolioOptimizer,
-        fetch_price_data_func: callable,
+        data_fetcher: DataFetcher,
     ):
         """Initialize the Backtester."""
         self.config = config
         self.strategy_name = "Mean-Variance Optimization"
         self.optimizer_cls = optimizer_cls
-        self.fetch_price_data_func = fetch_price_data_func
+        self.data_fetcher = data_fetcher
 
     def _prepare_inputs_for_date(
         self, log_returns_slice: pd.DataFrame
@@ -95,7 +96,7 @@ class Backtester:
             all_tickers.append(benchmark_ticker)
 
         # 2. Fetch all price data for the entire period ONCE
-        full_price_data = self.fetch_price_data_func(
+        full_price_data = self.data_fetcher.fetch_price_data(
             all_tickers,
             full_start_date.strftime("%Y-%m-%d"),
             full_end_date.strftime("%Y-%m-%d"),

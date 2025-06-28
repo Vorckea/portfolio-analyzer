@@ -5,8 +5,6 @@ import yfinance as yf
 
 from portfolio_analyzer.config.config import DCFConfig
 
-logger = logging.getLogger(__name__)
-
 
 class DCFCalculator:
     """An advanced, adaptive 3-stage DCF model with improved validation and logging.
@@ -17,12 +15,19 @@ class DCFCalculator:
     for the Black-Litterman model.
     """
 
-    def __init__(self, ticker_symbol: str, config: DCFConfig, risk_free_rate: float):
+    def __init__(
+        self,
+        ticker_symbol: str,
+        config: DCFConfig,
+        risk_free_rate: float,
+        logger: logging.Logger = None,
+    ):
         """Initialize the DCFCalculator."""
         self.ticker_symbol = ticker_symbol
         self.ticker = yf.Ticker(ticker_symbol)
         self.config = config
         self.risk_free_rate = risk_free_rate
+        self.logger = logger or logging.getLogger(__name__)
         self._data = {}
 
     def _fetch_data(self) -> bool:
@@ -40,7 +45,7 @@ class DCFCalculator:
 
             # Helper for clear logging
             def skip(reason):
-                logger.info("Skipping %s: %s.", self.ticker_symbol, reason)
+                self.logger.info("Skipping %s: %s.", self.ticker_symbol, reason)
                 return False
 
             # 1. Sector validation
@@ -91,7 +96,7 @@ class DCFCalculator:
             return True
 
         except Exception:
-            logger.exception(
+            self.logger.exception(
                 "Skipping %s due to an unexpected error during data fetching.", self.ticker_symbol
             )
             return False
@@ -136,14 +141,15 @@ class DCFCalculator:
         wacc = self._calculate_wacc()
 
         # **IMPROVEMENT**: Enforce a sufficient spread between WACC and perpetual growth rate.
-        if (wacc - self.config.perpetual_growth_rate) < self.config.wacc_g_spread:
-            logger.info(
-                "Skipping %s: WACC (%.2f%%) is too close to perpetual growth rate (%.2f%%).",
-                self.ticker_symbol,
-                wacc * 100,
-                self.config.perpetual_growth_rate * 100,
-            )
-            return None
+        # if (wacc - self.config.perpetual_growth_rate) < self.config.wacc_g_spread:
+        #     self.logger.info(
+        #         "Skipping %s: WACC (%.2f%%) is too close to perpetual growth rate (%.2f%%).",
+        #         self.ticker_symbol,
+        #         wacc * 100,
+        #         self.config.perpetual_growth_rate * 100,
+        #     )
+        #    )
+        #    return None
 
         pv_fcf_list = []
         last_fcf = self._data["fcf"]

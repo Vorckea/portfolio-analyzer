@@ -14,11 +14,7 @@ import pandas as pd
 from sklearn.covariance import LedoitWolf
 
 from portfolio_analyzer.config.config import AppConfig
-from portfolio_analyzer.data.data_fetcher import (
-    calculate_dcf_views,
-    fetch_market_caps,
-    fetch_price_data,
-)
+from portfolio_analyzer.data.data_fetcher import DataFetcher
 from portfolio_analyzer.data.models import ModelInputs
 from portfolio_analyzer.return_estimator.black_litterman_return import BlackLittermanReturn
 from portfolio_analyzer.return_estimator.blended_return import BlendedReturn
@@ -71,7 +67,10 @@ def _apply_black_litterman_model(
             assets_in_view.loc[asset, asset] = 1
 
     view_vector = pd.Series(
-        {asset: float(dcf_views[asset]) for asset in assets_in_view.index}
+        {
+            asset: np.log(1 + float(dcf_views[asset])) / config.trading_days_per_year
+            for asset in assets_in_view.index
+        },
     ).sort_index()
 
     view_variance = (
@@ -184,7 +183,7 @@ def build_model_inputs(
     )
 
 
-def prepare_model_inputs(config: AppConfig) -> ModelInputs:
+def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelInputs:
     """Orchestrates the entire data preparation pipeline.
 
     Fetches prices, calculates returns, and builds all necessary inputs for
@@ -206,9 +205,9 @@ def prepare_model_inputs(config: AppConfig) -> ModelInputs:
     logger.info("DCF Views Enabled: %s", config.use_dcf_views)
 
     # 1. Fetch all raw data first
-    market_cap_series = fetch_market_caps(config.tickers)
+    market_cap_series = data_fetcher.fetch_market_caps(config.tickers)
     try:
-        close_df = fetch_price_data(
+        close_df = data_fetcher.fetch_price_data(
             tickers=config.tickers,
             start_date=config.date_range.start.strftime("%Y-%m-%d"),
             end_date=config.date_range.end.strftime("%Y-%m-%d"),
@@ -232,7 +231,7 @@ def prepare_model_inputs(config: AppConfig) -> ModelInputs:
             logger.warning("No market cap data available for the filtered tickers.")
 
     # 4. Calculate DCF views and log returns
-    dcf_views = calculate_dcf_views(config) if config.use_dcf_views else {}
+    dcf_views = data_fetcher.calculate_dcf_views(config) if config.use_dcf_views else {}
     log_returns = _calculate_log_returns(close_df)
 
     # 5. Get calculated inputs from the core builder function
