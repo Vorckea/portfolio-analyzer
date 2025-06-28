@@ -4,6 +4,7 @@ import numpy as np
 import yfinance as yf
 
 from portfolio_analyzer.config.config import DCFConfig
+from portfolio_analyzer.data.data_fetcher import DataFetcher
 
 
 class DCFCalculator:
@@ -20,6 +21,7 @@ class DCFCalculator:
         ticker_symbol: str,
         config: DCFConfig,
         risk_free_rate: float,
+        data_fetcher: DataFetcher,
         logger: logging.Logger = None,
     ):
         """Initialize the DCFCalculator."""
@@ -27,6 +29,7 @@ class DCFCalculator:
         self.ticker = yf.Ticker(ticker_symbol)
         self.config = config
         self.risk_free_rate = risk_free_rate
+        self.data_fetcher = data_fetcher
         self.logger = logger or logging.getLogger(__name__)
         self._data = {}
 
@@ -41,7 +44,8 @@ class DCFCalculator:
 
         """
         try:
-            info = self.ticker.info
+            info = self.data_fetcher.fetch_ticker_info(self.ticker_symbol)
+            cashflow_df = self.data_fetcher.fetch_cashflow(self.ticker_symbol)
 
             # Helper for clear logging
             def skip(reason):

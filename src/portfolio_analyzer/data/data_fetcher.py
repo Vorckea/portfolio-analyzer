@@ -5,7 +5,6 @@ import pandas as pd
 import yfinance as yf
 
 from portfolio_analyzer.config.config import AppConfig
-from portfolio_analyzer.data.dcf_calculator import DCFCalculator
 
 
 class DataFetcher:
@@ -13,11 +12,9 @@ class DataFetcher:
         self,
         logger: Optional[logging.Logger] = None,
         yf_module=yf,
-        dcf_calculator_cls=DCFCalculator,
     ):
         self.logger = logger or logging.getLogger(__name__)
         self.yf = yf_module
-        self.DCFCalculator = dcf_calculator_cls
 
     def fetch_price_data(self, tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
         self.logger.info("Fetching historical price data for %d tickers...", len(tickers))
@@ -60,13 +57,16 @@ class DataFetcher:
         return pd.Series(market_caps)
 
     def calculate_dcf_views(self, config: AppConfig) -> Dict[str, float]:
+        from portfolio_analyzer.data.dcf_calculator import DCFCalculator  # <-- Import here, locally
+
         self.logger.info("Calculating DCF-based views for %d tickers...", len(config.tickers))
         views = {}
         for ticker in config.tickers:
-            calculator = self.DCFCalculator(
+            calculator = DCFCalculator(
                 ticker_symbol=ticker,
                 config=config.dcf,
                 risk_free_rate=config.risk_free_rate,
+                data_fetcher=self,
             )
             expected_return = calculator.calculate_expected_return()
             if expected_return is not None:
@@ -77,3 +77,11 @@ class DataFetcher:
         else:
             self.logger.info("Successfully generated %d DCF views.", len(views))
         return views
+
+    def fetch_ticker_info(self, ticker_symbol: str) -> Dict:
+        ticker_obj = self.yf.Ticker(ticker_symbol)
+        return ticker_obj.info
+
+    def fetch_cashflow(self, ticker_symbol: str):
+        ticker_obj = self.yf.Ticker(ticker_symbol)
+        return ticker_obj.cashflow

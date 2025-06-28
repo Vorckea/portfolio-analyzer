@@ -73,8 +73,10 @@ def _apply_black_litterman_model(
         },
     ).sort_index()
 
+    daily_covariance_matrix = covariance_matrix.copy() / config.trading_days_per_year
     view_variance = (
-        tau * covariance_matrix.loc[assets_in_view.index, assets_in_view.index].values.diagonal()
+        tau
+        * daily_covariance_matrix.loc[assets_in_view.index, assets_in_view.index].values.diagonal()
     )
     view_confidence = pd.DataFrame(
         np.diag(view_variance), index=assets_in_view.index, columns=assets_in_view.index
