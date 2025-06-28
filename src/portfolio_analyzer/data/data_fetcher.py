@@ -56,28 +56,6 @@ class DataFetcher:
                 market_caps[ticker_symbol] = 0
         return pd.Series(market_caps)
 
-    def calculate_dcf_views(self, config: AppConfig) -> Dict[str, float]:
-        from portfolio_analyzer.data.dcf_calculator import DCFCalculator  # <-- Import here, locally
-
-        self.logger.info("Calculating DCF-based views for %d tickers...", len(config.tickers))
-        views = {}
-        for ticker in config.tickers:
-            calculator = DCFCalculator(
-                ticker_symbol=ticker,
-                config=config.dcf,
-                risk_free_rate=config.risk_free_rate,
-                data_fetcher=self,
-            )
-            expected_return = calculator.calculate_expected_return()
-            if expected_return is not None:
-                views[ticker] = expected_return
-                self.logger.debug("  - View for %s: %.2f%%", ticker, expected_return * 100)
-        if not views:
-            self.logger.warning("No valid DCF views could be generated.")
-        else:
-            self.logger.info("Successfully generated %d DCF views.", len(views))
-        return views
-
     def fetch_ticker_info(self, ticker_symbol: str) -> Dict:
         ticker_obj = self.yf.Ticker(ticker_symbol)
         return ticker_obj.info

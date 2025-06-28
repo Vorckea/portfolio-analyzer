@@ -18,6 +18,7 @@ from portfolio_analyzer.data.data_fetcher import DataFetcher
 from portfolio_analyzer.data.models import ModelInputs
 from portfolio_analyzer.return_estimator.black_litterman_return import BlackLittermanReturn
 from portfolio_analyzer.return_estimator.blended_return import BlendedReturn
+from portfolio_analyzer.return_estimator.dcf_return_estimator import DCFReturnEstimator
 from portfolio_analyzer.return_estimator.ewma_return import EWMAReturn
 from portfolio_analyzer.utils.exceptions import DataFetchingError
 
@@ -233,7 +234,13 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
             logger.warning("No market cap data available for the filtered tickers.")
 
     # 4. Calculate DCF views and log returns
-    dcf_views = data_fetcher.calculate_dcf_views(config) if config.use_dcf_views else {}
+    dcf_return_estimator = DCFReturnEstimator(
+        tickers=final_tickers_list,
+        risk_free_rate=config.risk_free_rate,
+        data_fetcher=data_fetcher,
+        config=config,
+    )
+    dcf_views = dcf_return_estimator.get_returns().to_dict() if config.use_dcf_views else {}
     log_returns = _calculate_log_returns(close_df)
 
     # 5. Get calculated inputs from the core builder function
