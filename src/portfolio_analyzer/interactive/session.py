@@ -27,10 +27,11 @@ class PortfolioAnalysisSession:
     portfolio optimization and simulation parameters.
 
     Attributes:
-        config (AppConfig): The application configuration.
+        config (AppConfig): The application configuration object.
+        model_inputs (ip.ModelInputs): The prepared data inputs for the models.
+        latest_result (Optional[PortfolioResult]): The result of the last optimization.
         optimizer (Optional[PortfolioOptimizer]): The portfolio optimizer instance.
         mc_simulator (Optional[MonteCarloSimulator]): The Monte Carlo simulator instance.
-        latest_result (Optional[PortfolioResult]): The result of the last optimization.
 
     """
 
@@ -46,26 +47,15 @@ class PortfolioAnalysisSession:
         Args:
             config (AppConfig): The application configuration object.
             model_inputs (ip.ModelInputs): The prepared data inputs for the models.
+            optimizer (Optional[PortfolioOptimizer]): The portfolio optimizer instance.
+            mc_simulator (Optional[MonteCarloSimulator]): The Monte Carlo simulator instance.
 
         """
         self.config = config
         self.model_inputs = model_inputs
         self.latest_result: Optional[PortfolioResult] = None
-
-        self.optimizer = optimizer or (
-            PortfolioOptimizer(
-                mean_returns=self.model_inputs.mean_returns,
-                cov_matrix=self.model_inputs.cov_matrix,
-                config=self.config,
-            )
-            if not self.model_inputs.mean_returns.empty
-            else None
-        )
-        self.mc_simulator = mc_simulator or (
-            MonteCarloSimulator(config=self.config)
-            if not self.model_inputs.mean_returns.empty
-            else None
-        )
+        self.optimizer = optimizer
+        self.mc_simulator = mc_simulator
 
     def run_interactive_optimization(self, lambda_reg: float):
         """Run optimization and displays results for interactive use.
