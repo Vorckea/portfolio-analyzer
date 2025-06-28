@@ -16,8 +16,9 @@ class BlackLittermanReturn(ReturnEstimator):
         assets_in_view: pd.DataFrame,
         view_confidence: pd.DataFrame,
         view_vector: pd.Series,
-        config: AppConfig = None,
+        config: AppConfig,
     ):
+        # Align tickers and ensure consistent ordering
         tickers = log_returns.columns.intersection(market_cap_weights.index).sort_values()
         self.tickers = tickers
         self.config = config
@@ -28,6 +29,7 @@ class BlackLittermanReturn(ReturnEstimator):
         self.market_cap_weights = market_cap_weights.reindex(tickers)
         self.tau = tau
 
+        # Align view matrices/vectors
         assets_in_view = assets_in_view.sort_index()
         view_vector = view_vector.sort_index()
         view_confidence = view_confidence.sort_index()
@@ -35,6 +37,7 @@ class BlackLittermanReturn(ReturnEstimator):
         self.excess_returns_cov = self._excess_returns_covariance()
         self.implied_equilibrium_returns = self._implied_excess_equilibrium_returns()
 
+        # Align view to tickers and ensure all dimensions match
         view_tickers = assets_in_view.columns.intersection(tickers)
         view_names = assets_in_view.index.intersection(view_vector.index).intersection(
             view_confidence.index
@@ -43,23 +46,9 @@ class BlackLittermanReturn(ReturnEstimator):
         self.view_confidence = view_confidence.loc[view_names, view_names]
         self.view_vector = view_vector.loc[view_names]
 
-        # Print shapes for debugging
-        print(f"Log returns shape: {self.log_returns.shape}")
-        print(f"Market cap weights shape: {self.market_cap_weights.shape}")
-        print(f"Excess returns covariance shape: {self.excess_returns_cov.shape}")
-        print(f"Implied equilibrium returns shape: {self.implied_equilibrium_returns.shape}")
-        print(f"Assets in view shape: {self.assets_in_view.shape}")
-        print(f"View confidence shape: {self.view_confidence.shape}")
-        print(f"View vector shape: {self.view_vector.shape}")
+        self.posterior_returns = self._posterior_returns()
 
-        print("assets_in_view columns:", list(self.assets_in_view.columns))
-        print("market_cap_weights index:", list(self.market_cap_weights.index))
-        print("excess_returns_cov columns:", list(self.excess_returns_cov.columns))
-        print("assets_in_view index:", list(self.assets_in_view.index))
-        print("view_confidence index:", list(self.view_confidence.index))
-        print("view_confidence columns:", list(self.view_confidence.columns))
-        print("view_vector index:", list(self.view_vector.index))
-
+    def _validate_dimensions(self):
         assert all(self.assets_in_view.columns == self.market_cap_weights.index), (
             "Asset columns not aligned!"
         )
@@ -67,7 +56,6 @@ class BlackLittermanReturn(ReturnEstimator):
             "Covariance columns not aligned!"
         )
 
-        # Check view alignment
         assert all(self.assets_in_view.index == self.view_confidence.index), (
             "View indices not aligned!"
         )
@@ -78,37 +66,41 @@ class BlackLittermanReturn(ReturnEstimator):
             "View vector and assets_in_view not aligned!"
         )
 
-        self.posterior_returns = self._posterior_returns()
-
     def _implied_excess_equilibrium_returns(self) -> pd.Series:
-        print("delta:", self.risk_aversion)
-        print("w_mkt sum:", self.market_cap_weights.sum())
-        print("Covariance matrix mean:", self.excess_returns_cov.values.mean())
-        print("Covariance matrix diag:", self.excess_returns_cov.values.diagonal())
+        """Compute the implied equilibrium excess returns (Pi) using the CAPM prior.
 
-        return pd.Series(
-            self.risk_aversion * self.excess_returns_cov.values @ self.market_cap_weights.values,
-            index=self.tickers,
-        )
+        Returns:
+            pd.Series: Implied equilibrium excess returns
+
+        """
+        pi = self.risk_aversion * self.excess_returns_cov.values @ self.market_cap_weights.values
+        return pd.Series(pi, index=self.tickers)
 
     def _posterior_returns(self) -> pd.Series:
-        tau_cov_inv = np.linalg.inv(self.tau * self.excess_returns_cov.values)
-        left_term = np.linalg.inv(
-            tau_cov_inv
-            + self.assets_in_view.T.values
-            @ np.linalg.inv(self.view_confidence.values)
-            @ self.assets_in_view.values
-        )
-        right_term = (
-            tau_cov_inv @ self.implied_equilibrium_returns.values
-            + self.assets_in_view.T.values
-            @ np.linalg.inv(self.view_confidence.values)
-            @ self.view_vector.values
-        )
-        posterior = left_term @ right_term
+        """Compute the Black-Litterman posterior returns.
+
+        Returns:
+            pd.Series: Posterior returns
+
+        """
+        tau_cov = self.tau * self.excess_returns_cov.values
+        tau_cov_inv = np.linalg.inv(tau_cov)
+        P = self.assets_in_view.values
+        Q = self.view_vector.values
+        Omega_inv = np.linalg.inv(self.view_confidence.values)
+
+        left = np.linalg.inv(tau_cov_inv + P.T @ Omega_inv @ P)
+        right = tau_cov_inv @ self.implied_equilibrium_returns.values + P.T @ Omega_inv @ Q
+        posterior = left @ right
         return pd.Series(posterior, index=self.tickers)
 
     def _excess_returns_covariance(self) -> pd.DataFrame:
+        """Compute the covariance matrix of excess returns.
+
+        Returns:
+            pd.DataFrame: Covariance matrix of excess returns
+
+        """
         log_risk_free_rate = np.log(
             (1 + self.risk_free_rate) ** (1 / self.config.trading_days_per_year)
         )
@@ -117,10 +109,28 @@ class BlackLittermanReturn(ReturnEstimator):
         return pd.DataFrame(cov, index=self.tickers, columns=self.tickers)
 
     def get_posterior_returns(self) -> pd.Series:
+        """Annualized Black-Litterman posterior returns.
+
+        Returns:
+            pd.Series: Annualized Black-Litterman posterior returns
+
+        """
         return self.posterior_returns * self.config.trading_days_per_year
 
     def get_implied_equilibrium_returns(self) -> pd.Series:
+        """Annualized implied equilibrium returns.
+
+        Returns:
+            pd.Series: Annualized implied equilibrium returns
+
+        """
         return self.implied_equilibrium_returns * self.config.trading_days_per_year
 
     def get_returns(self) -> pd.Series:
+        """Alias for get_posterior_returns.
+
+        Returns:
+            pd.Series: Annualized Black-Litterman posterior returns
+
+        """
         return self.get_posterior_returns()
