@@ -13,16 +13,15 @@ class DCFReturnEstimator(ReturnEstimator):
         self,
         tickers: list[str],
         risk_free_rate: float,
-        data_fetcher: DataFetcher,
-        config: AppConfig,
-        logger: logging.Logger = None,
+        data_fetcher: DataFetcher,  # Injected
+        config: AppConfig,  # Injected
+        logger: logging.Logger = None,  # Injected
     ):
         self.tickers = tickers
         self.risk_free_rate = risk_free_rate
         self.data_fetcher = data_fetcher
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
-
         self.dcf_returns = self.get_dcf_returns()
 
     def _fetch_data(self, ticker):
@@ -148,7 +147,8 @@ class DCFReturnEstimator(ReturnEstimator):
         current_price = data["current_price"]
 
         expected_return = (intrinsic_value_per_share / current_price) - 1
-        return np.clip(expected_return, -0.5, 1.0)
+        log_return = np.log(1 + expected_return)
+        return np.clip(log_return, -0.7, 0.7)
 
     def get_dcf_returns(self) -> pd.Series:
         self.logger.info("Calculating DCF returns for %d tickers...", len(self.tickers))

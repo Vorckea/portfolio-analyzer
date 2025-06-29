@@ -4,8 +4,6 @@ from typing import Dict, Optional
 import pandas as pd
 import yfinance as yf
 
-from portfolio_analyzer.config.config import AppConfig
-
 
 class DataFetcher:
     def __init__(

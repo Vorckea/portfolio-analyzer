@@ -68,10 +68,7 @@ def _apply_black_litterman_model(
             assets_in_view.loc[asset, asset] = 1
 
     view_vector = pd.Series(
-        {
-            asset: np.log(1 + float(dcf_views[asset])) / config.trading_days_per_year
-            for asset in assets_in_view.index
-        },
+        {asset: dcf_views[asset] / config.trading_days_per_year for asset in assets_in_view.index},
     ).sort_index()
 
     daily_covariance_matrix = covariance_matrix.copy() / config.trading_days_per_year
