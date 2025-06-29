@@ -47,7 +47,7 @@ def _apply_black_litterman_model(
     covariance_matrix: pd.DataFrame,
     market_cap_weights: pd.Series,
     tau: float,
-    dcf_views: dict[str, float] | None = None,
+    dcf_views: pd.Series = None,
     config: AppConfig | None = None,
 ) -> BlackLittermanReturn:
     if market_cap_weights is None or market_cap_weights.empty:
@@ -57,28 +57,10 @@ def _apply_black_litterman_model(
     covariance_matrix = covariance_matrix.loc[log_returns.columns, log_returns.columns]
     market_cap_weights = market_cap_weights.reindex(log_returns.columns).fillna(0.0)
 
-    if dcf_views is None or not dcf_views:
+    if dcf_views is None or dcf_views.empty:
         return None
 
-    assets_in_view, view_vector, view_confidence = None, None, None
-    view_assets = sorted(dcf_views.keys())
-    assets_in_view = pd.DataFrame(0, index=view_assets, columns=log_returns.columns)
-    for asset in view_assets:
-        if asset in assets_in_view.columns:
-            assets_in_view.loc[asset, asset] = 1
-
-    view_vector = pd.Series(
-        {asset: dcf_views[asset] / config.trading_days_per_year for asset in assets_in_view.index},
-    ).sort_index()
-
-    daily_covariance_matrix = covariance_matrix.copy() / config.trading_days_per_year
-    view_variance = (
-        tau
-        * daily_covariance_matrix.loc[assets_in_view.index, assets_in_view.index].values.diagonal()
-    )
-    view_confidence = pd.DataFrame(
-        np.diag(view_variance), index=assets_in_view.index, columns=assets_in_view.index
-    ).sort_index()
+    view_vector = dcf_views.copy()
 
     bl_model = BlackLittermanReturn(
         log_returns=log_returns,
@@ -86,8 +68,6 @@ def _apply_black_litterman_model(
         risk_aversion=risk_aversion,
         market_cap_weights=market_cap_weights,
         tau=tau,
-        assets_in_view=assets_in_view,
-        view_confidence=view_confidence,
         view_vector=view_vector,
         config=config,
     )
@@ -99,7 +79,7 @@ def build_model_inputs(
     log_returns: pd.DataFrame,
     config: AppConfig,
     market_cap_weights: Optional[pd.Series] = None,
-    dcf_views: Optional[Dict[str, float]] = None,
+    dcf_views: Optional[pd.Series] = None,
 ) -> Tuple[pd.Series, pd.DataFrame, pd.Series, Optional[pd.Series], List[str]]:
     """Build the final model inputs from processed log returns and views.
 
@@ -237,7 +217,7 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
         data_fetcher=data_fetcher,
         config=config,
     )
-    dcf_views = dcf_return_estimator.get_returns().to_dict() if config.use_dcf_views else {}
+    dcf_views = dcf_return_estimator.get_returns()
     log_returns = _calculate_log_returns(close_df)
 
     # 5. Get calculated inputs from the core builder function

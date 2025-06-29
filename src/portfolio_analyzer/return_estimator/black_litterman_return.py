@@ -13,15 +13,15 @@ class BlackLittermanReturn(ReturnEstimator):
         risk_aversion: float,
         market_cap_weights: pd.Series,
         tau: float,
-        assets_in_view: pd.DataFrame,
-        view_confidence: pd.DataFrame,
         view_vector: pd.Series,
-        config: AppConfig,
+        assets_in_view: pd.DataFrame = None,
+        view_confidence: pd.DataFrame = None,
+        config: AppConfig = None,
     ):
         # Align tickers and ensure consistent ordering
         tickers = log_returns.columns.intersection(market_cap_weights.index).sort_values()
         self.tickers = tickers
-        self.config = config
+        self.config = config or AppConfig.get_instance()
 
         self.log_returns = log_returns[tickers]
         self.risk_free_rate = risk_free_rate
@@ -30,9 +30,17 @@ class BlackLittermanReturn(ReturnEstimator):
         self.tau = tau
 
         # Align view matrices/vectors
-        assets_in_view = assets_in_view.sort_index()
         view_vector = view_vector.sort_index()
-        view_confidence = view_confidence.sort_index()
+        assets_in_view = (
+            assets_in_view.sort_index()
+            if assets_in_view is not None
+            else self._generate_assets_in_view(view_vector)
+        )
+        view_confidence = (
+            view_confidence.sort_index()
+            if view_confidence is not None
+            else self._generate_view_confidence(assets_in_view)
+        )
 
         self.excess_returns_cov = self._excess_returns_covariance()
         self.implied_equilibrium_returns = self._implied_excess_equilibrium_returns()
@@ -44,9 +52,38 @@ class BlackLittermanReturn(ReturnEstimator):
         )
         self.assets_in_view = assets_in_view.loc[view_names, view_tickers]
         self.view_confidence = view_confidence.loc[view_names, view_names]
-        self.view_vector = view_vector.loc[view_names]
+        self.view_vector = view_vector.loc[view_names] / self.config.trading_days_per_year
 
         self.posterior_returns = self._posterior_returns()
+
+    def _generate_assets_in_view(self, view_vector: pd.Series) -> pd.DataFrame:
+        assets = view_vector.index
+        columns = self.tickers
+        P = pd.DataFrame(0, index=assets, columns=columns)
+        for asset in assets:
+            if asset in columns:
+                P.loc[asset, asset] = 1.0
+        return P.sort_index()
+
+    def _generate_view_confidence(self, assets_in_view: pd.DataFrame) -> pd.DataFrame:
+        from sklearn.covariance import LedoitWolf
+
+        lw = LedoitWolf()
+        lw.fit(self.log_returns)
+        daily_cov = pd.DataFrame(
+            lw.covariance_,
+            index=self.tickers,
+            columns=self.tickers,
+        ).sort_index()
+        tau = self.tau
+        assets = assets_in_view.index
+        view_variance = tau * daily_cov.loc[assets, assets].values.diagonal()
+        Omega = pd.DataFrame(
+            np.diag(view_variance),
+            index=assets,
+            columns=assets,
+        ).sort_index()
+        return Omega
 
     def _validate_dimensions(self):
         assert all(self.assets_in_view.columns == self.market_cap_weights.index), (
