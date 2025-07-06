@@ -208,7 +208,7 @@ class AppConfig:
             "MULTI.OL",
             "NORCO.OL",
             "EPR.OL",
-            "SWDBY.ST",
+            "SWED-A.ST",
             "0P00000MVB.IR",
             "0P0001IMY8.F",
             "0P00000B0I",

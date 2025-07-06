@@ -7,7 +7,7 @@ final inputs (mean returns, covariance) for the optimizer.
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -21,6 +21,8 @@ from portfolio_analyzer.return_estimator.blended_return import BlendedReturn
 from portfolio_analyzer.return_estimator.dcf_return_estimator import DCFReturnEstimator
 from portfolio_analyzer.return_estimator.ewma_return import EWMAReturn
 from portfolio_analyzer.utils.exceptions import DataFetchingError
+
+from ..return_estimator.fill_nan_return import FillNaNReturn
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +219,18 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
         data_fetcher=data_fetcher,
         config=config,
     )
-    dcf_views = dcf_return_estimator.get_returns()
+
+    filled_return_estimator = FillNaNReturn(
+        returns=dcf_return_estimator,
+        replacement_returns=EWMAReturn(
+            log_returns=_calculate_log_returns(close_df),
+            span=270,
+            trading_days=config.trading_days_per_year,
+            shrinkage_factor=0.5,
+        ),
+    )
+
+    dcf_views = filled_return_estimator.get_returns()
     log_returns = _calculate_log_returns(close_df)
 
     # 5. Get calculated inputs from the core builder function

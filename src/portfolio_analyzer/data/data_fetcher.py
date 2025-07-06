@@ -1,29 +1,33 @@
 import logging
-from typing import Dict, Optional
+from abc import ABC, abstractmethod
+from typing import Dict, List, Optional
 
 import pandas as pd
-import yfinance as yf
+
+
+class MarketDataProvider(ABC):
+    @abstractmethod
+    def download(self, tickers: List[str], start: str, end: str, **kwargs) -> pd.DataFrame: ...
+    @abstractmethod
+    def Ticker(self, ticker: str): ...
 
 
 class DataFetcher:
-    def __init__(
-        self,
-        logger: Optional[logging.Logger] = None,
-        yf_module=yf,
-    ):
+    def __init__(self, provider: MarketDataProvider, logger: Optional[logging.Logger] = None):
+        self.provider: MarketDataProvider = provider
         self.logger = logger or logging.getLogger(__name__)
-        self.yf = yf_module
 
-    def fetch_price_data(self, tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
-        self.logger.info("Fetching historical price data for %d tickers...", len(tickers))
-        data = self.yf.download(
+    def fetch_price_data(self, tickers: List[str], start_date: str, end_date: str) -> pd.DataFrame:
+        self.logger.info("Fetching historical price date for %d tickers...", len(tickers))
+        data: pd.DataFrame = self.provider.download(
             tickers, start=start_date, end=end_date, progress=False, auto_adjust=True
         )
         if data.empty:
             self.logger.error(
-                "No price data fetched for any tickers. yfinance returned an empty DataFrame."
+                "No price data fetched for any tickers. Provider returned an empty DataFrame."
             )
             raise ValueError("No price data fetched for any tickers.")
+
         close_df = data["Close"] if isinstance(data.columns, pd.MultiIndex) else data[["Close"]]
         close_df = close_df.dropna(axis=1, how="all")
         if len(close_df.columns) < len(tickers):
@@ -31,13 +35,13 @@ class DataFetcher:
             self.logger.warning("Failed to fetch price data for: %s", ", ".join(failed_tickers))
         return close_df.ffill()
 
-    def fetch_market_caps(self, tickers: list[str]) -> pd.Series:
+    def fetch_market_caps(self, tickers: List[str]) -> pd.Series:
         self.logger.info("Fetching market cap data for %d tickers...", len(tickers))
         market_caps = {}
         for ticker_symbol in tickers:
             try:
-                ticker_obj = self.yf.Ticker(ticker_symbol)
-                m_cap = ticker_obj.info.get("marketCap")
+                ticker_obj = self.provider.Ticker(ticker_symbol)
+                m_cap = getattr(ticker_obj, "info", {}).get("marketCap")
                 if m_cap is not None:
                     market_caps[ticker_symbol] = m_cap
                 else:
@@ -55,9 +59,9 @@ class DataFetcher:
         return pd.Series(market_caps)
 
     def fetch_ticker_info(self, ticker_symbol: str) -> Dict:
-        ticker_obj = self.yf.Ticker(ticker_symbol)
-        return ticker_obj.info
+        ticker_obj = self.provider.Ticker(ticker_symbol)
+        return getattr(ticker_obj, "info", {})
 
     def fetch_cashflow(self, ticker_symbol: str):
-        ticker_obj = self.yf.Ticker(ticker_symbol)
-        return ticker_obj.cashflow
+        ticker_obj = self.provider.Ticker(ticker_symbol)
+        return getattr(ticker_obj, "cashflow", None)

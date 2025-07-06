@@ -157,6 +157,9 @@ class DCFReturnEstimator(ReturnEstimator):
             expected_return = self._calculate_expected_return(ticker)
             if expected_return is not None:
                 results[ticker] = expected_return
+            else:
+                self.logger.info("No valid DCF return for %s, skipping.", ticker)
+                results[ticker] = np.nan
         self.logger.info("Calculated DCF returns for %d tickers.", len(results))
         return pd.Series(results, dtype=float).fillna(0.0)
 
