@@ -1,15 +1,18 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
 
 class MarketDataProvider(ABC):
     @abstractmethod
-    def download(self, tickers: List[str], start: str, end: str, **kwargs) -> pd.DataFrame: ...
+    def download(self, tickers: List[str], start: str, end: str, **kwargs) -> pd.DataFrame:
+        pass
+
     @abstractmethod
-    def Ticker(self, ticker: str): ...
+    def Ticker(self, ticker: str) -> Any:
+        pass
 
 
 class DataFetcher:
@@ -47,21 +50,19 @@ class DataFetcher:
             dates as index.
 
         """
-        self.logger.info("Fetching historical price date for %d tickers...", len(tickers))
+        self._log_info(f"Fetching historical price data for {len(tickers)} tickers...")
         data: pd.DataFrame = self.provider.download(
             tickers, start=start_date, end=end_date, progress=False, auto_adjust=True
         )
         if data.empty:
-            self.logger.error(
+            self._log_error(
                 "No price data fetched for any tickers. Provider returned an empty DataFrame."
             )
             raise ValueError("No price data fetched for any tickers.")
 
-        close_df = data["Close"] if isinstance(data.columns, pd.MultiIndex) else data[["Close"]]
+        close_df = self._extract_close_prices(data)
         close_df = close_df.dropna(axis=1, how="all")
-        if len(close_df.columns) < len(tickers):
-            failed_tickers = set(tickers) - set(close_df.columns)
-            self.logger.warning("Failed to fetch price data for: %s", ", ".join(failed_tickers))
+        self._warn_missing_tickers(tickers, close_df.columns)
         return close_df.ffill()
 
     def fetch_market_caps(self, tickers: List[str]) -> pd.Series:
@@ -74,24 +75,20 @@ class DataFetcher:
             pd.Series: Series containing market cap values indexed by ticker symbols.
 
         """
-        self.logger.info("Fetching market cap data for %d tickers...", len(tickers))
+        self._log_info(f"Fetching market cap data for {len(tickers)} tickers...")
         market_caps = {}
         for ticker_symbol in tickers:
             try:
                 ticker_obj = self.provider.Ticker(ticker_symbol)
                 m_cap = getattr(ticker_obj, "info", {}).get("marketCap")
-                if m_cap is not None:
-                    market_caps[ticker_symbol] = m_cap
-                else:
-                    self.logger.warning(
-                        "Market cap not available for %s. Defaulting to 0.", ticker_symbol
+                market_caps[ticker_symbol] = m_cap if m_cap is not None else 0
+                if m_cap is None:
+                    self._log_warning(
+                        f"Market cap not available for {ticker_symbol}. Defaulting to 0."
                     )
-                    market_caps[ticker_symbol] = 0
             except Exception as e:
-                self.logger.error(
-                    "Failed to fetch market cap for %s due to an error: %s. Defaulting to 0.",
-                    ticker_symbol,
-                    e,
+                self._log_error(
+                    f"Failed to fetch market cap for {ticker_symbol} due to an error: {e}. Defaulting to 0."
                 )
                 market_caps[ticker_symbol] = 0
         return pd.Series(market_caps)
@@ -122,3 +119,28 @@ class DataFetcher:
         """
         ticker_obj = self.provider.Ticker(ticker_symbol)
         return getattr(ticker_obj, "cashflow", None)
+
+    def _extract_close_prices(self, data: pd.DataFrame) -> pd.DataFrame:
+        if isinstance(data.columns, pd.MultiIndex):
+            return data["Close"]
+        elif "Close" in data.columns:
+            return data[["Close"]]
+        else:
+            raise ValueError("No 'Close' column found in price data.")
+
+    def _warn_missing_tickers(self, requested: List[str], received) -> None:
+        missing = set(requested) - set(received)
+        if missing:
+            self._log_warning(f"Failed to fetch price data for: {', '.join(missing)}")
+
+    def _log_info(self, msg: str) -> None:
+        if self.logger:
+            self.logger.info(msg)
+
+    def _log_warning(self, msg: str) -> None:
+        if self.logger:
+            self.logger.warning(msg)
+
+    def _log_error(self, msg: str) -> None:
+        if self.logger:
+            self.logger.error(msg)
