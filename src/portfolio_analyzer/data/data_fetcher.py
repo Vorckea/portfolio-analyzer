@@ -13,11 +13,40 @@ class MarketDataProvider(ABC):
 
 
 class DataFetcher:
+    """DataFetcher class to handle fetching historical price data, market capitalizations, and ticker information."""  # noqa: E501
+
     def __init__(self, provider: MarketDataProvider, logger: Optional[logging.Logger] = None):
+        """Initialize the DataFetcher with a market data provider and an optional logger.
+
+        Args:
+            provider (MarketDataProvider): An instance of a market data provider that implements the
+                MarketDataProvider interface. This provider is used to fetch historical price data,
+                market capitalizations, and other ticker-related information.
+            logger (Optional[logging.Logger], optional): An optional logger instance for logging
+                information, warnings, and errors during data fetching operations. If not provided,
+                a default logger will be created using `logging.getLogger(__name__)`.
+                Defaults to None.
+
+        """
         self.provider: MarketDataProvider = provider
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger: logging.Logger = logger or logging.getLogger(__name__)
 
     def fetch_price_data(self, tickers: List[str], start_date: str, end_date: str) -> pd.DataFrame:
+        """Fetch historical price data for the given tickers within the specified date range.
+
+        Args:
+            tickers (List[str]): List of ticker symbols to fetch data for.
+            start_date (str): Start date for fetching historical data in 'YYYY-MM-DD' format.
+            end_date (str): End date for fetching historical data in 'YYYY-MM-DD' format.
+
+        Raises:
+            ValueError: If no price data is fetched for any of the tickers.
+
+        Returns:
+            pd.DataFrame: DataFrame containing the historical price data with tickers as columns and
+            dates as index.
+
+        """
         self.logger.info("Fetching historical price date for %d tickers...", len(tickers))
         data: pd.DataFrame = self.provider.download(
             tickers, start=start_date, end=end_date, progress=False, auto_adjust=True
@@ -36,6 +65,15 @@ class DataFetcher:
         return close_df.ffill()
 
     def fetch_market_caps(self, tickers: List[str]) -> pd.Series:
+        """Fetch market capitalization data for the given tickers.
+
+        Args:
+            tickers (List[str]): List of ticker symbols to fetch market cap for.
+
+        Returns:
+            pd.Series: Series containing market cap values indexed by ticker symbols.
+
+        """
         self.logger.info("Fetching market cap data for %d tickers...", len(tickers))
         market_caps = {}
         for ticker_symbol in tickers:
@@ -59,9 +97,28 @@ class DataFetcher:
         return pd.Series(market_caps)
 
     def fetch_ticker_info(self, ticker_symbol: str) -> Dict:
+        """Fetch detailed information for a specific ticker symbol.
+
+        Args:
+            ticker_symbol (str): Ticker symbol to fetch information for.
+
+        Returns:
+            Dict: Dictionary containing detailed information about the ticker, such as market cap,
+            sector, industry, and other relevant data.
+
+        """
         ticker_obj = self.provider.Ticker(ticker_symbol)
         return getattr(ticker_obj, "info", {})
 
     def fetch_cashflow(self, ticker_symbol: str):
+        """Fetch the cash flow statement for a specific ticker symbol.
+
+        Args:
+            ticker_symbol (str): Ticker symbol to fetch cash flow data for.
+
+        Returns:
+            _type_: Cash flow statement as a DataFrame or None if not available.
+
+        """
         ticker_obj = self.provider.Ticker(ticker_symbol)
         return getattr(ticker_obj, "cashflow", None)
