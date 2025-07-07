@@ -19,42 +19,47 @@ class BlackLittermanReturn(ReturnEstimator):
         config: AppConfig = None,
     ):
         # Align tickers and ensure consistent ordering
-        tickers = log_returns.columns.intersection(market_cap_weights.index).sort_values()
-        self.tickers = tickers
+        self.tickers = self._align_tickers(log_returns, market_cap_weights)
         self.config = config or AppConfig.get_instance()
 
-        self.log_returns = log_returns[tickers]
+        self.log_returns = log_returns[self.tickers]
         self.risk_free_rate = risk_free_rate
         self.risk_aversion = risk_aversion
-        self.market_cap_weights = market_cap_weights.reindex(tickers)
+        self.market_cap_weights = market_cap_weights.reindex(self.tickers)
         self.tau = tau
 
         # Align view matrices/vectors
-        view_vector = view_vector.sort_index()
-        assets_in_view = (
+        self.view_vector = view_vector.sort_index()
+        self.assets_in_view = (
             assets_in_view.sort_index()
             if assets_in_view is not None
-            else self._generate_assets_in_view(view_vector)
+            else self._generate_assets_in_view(self.view_vector)
         )
-        view_confidence = (
+        self.view_confidence = (
             view_confidence.sort_index()
             if view_confidence is not None
-            else self._generate_view_confidence(assets_in_view)
+            else self._generate_view_confidence(self.assets_in_view)
         )
+
+        self._align_views()
 
         self.excess_returns_cov = self._excess_returns_covariance()
         self.implied_equilibrium_returns = self._implied_excess_equilibrium_returns()
-
-        # Align view to tickers and ensure all dimensions match
-        view_tickers = assets_in_view.columns.intersection(tickers)
-        view_names = assets_in_view.index.intersection(view_vector.index).intersection(
-            view_confidence.index
-        )
-        self.assets_in_view = assets_in_view.loc[view_names, view_tickers]
-        self.view_confidence = view_confidence.loc[view_names, view_names]
-        self.view_vector = view_vector.loc[view_names] / self.config.trading_days_per_year
-
         self.posterior_returns = self._posterior_returns()
+
+    @staticmethod
+    def _align_tickers(log_returns: pd.DataFrame, market_cap_weights: pd.Series) -> pd.Index:
+        return log_returns.columns.intersection(market_cap_weights.index).sort_values()
+
+    def _align_views(self):
+        tickers = self.tickers
+        view_tickers = self.assets_in_view.columns.intersection(tickers)
+        view_names = self.assets_in_view.index.intersection(self.view_vector.index).intersection(
+            self.view_confidence.index
+        )
+        self.assets_in_view = self.assets_in_view.loc[view_names, view_tickers]
+        self.view_confidence = self.view_confidence.loc[view_names, view_names]
+        self.view_vector = self.view_vector.loc[view_names] / self.config.trading_days_per_year
 
     def _generate_assets_in_view(self, view_vector: pd.Series) -> pd.DataFrame:
         assets = view_vector.index
