@@ -60,8 +60,7 @@ class DataFetcher:
             )
             raise ValueError("No price data fetched for any tickers.")
 
-        close_df = self._extract_close_prices(data)
-        close_df = close_df.dropna(axis=1, how="all")
+        close_df = self._extract_close_prices(data).dropna(axis=1, how="all")
         self._warn_missing_tickers(tickers, close_df.columns)
         return close_df.ffill()
 
@@ -77,23 +76,21 @@ class DataFetcher:
         """
         self._log_info(f"Fetching market cap data for {len(tickers)} tickers...")
         market_caps = {}
-        for ticker_symbol in tickers:
+        for ticker in tickers:
             try:
-                ticker_obj = self.provider.Ticker(ticker_symbol)
-                m_cap = getattr(ticker_obj, "info", {}).get("marketCap")
-                market_caps[ticker_symbol] = m_cap if m_cap is not None else 0
+                info = getattr(self.provider.Ticker(ticker), "info", {})
+                m_cap = info.get("marketCap")
+                market_caps[ticker] = m_cap if m_cap is not None else 0
                 if m_cap is None:
-                    self._log_warning(
-                        f"Market cap not available for {ticker_symbol}. Defaulting to 0."
-                    )
+                    self._log_warning(f"Market cap not available for {ticker}. Defaulting to 0.")
             except Exception as e:
                 self._log_error(
-                    f"Failed to fetch market cap for {ticker_symbol} due to an error: {e}. Defaulting to 0."
+                    f"Failed to fetch market cap for {ticker} due to an error: {e}. Defaulting to 0."
                 )
-                market_caps[ticker_symbol] = 0
+                market_caps[ticker] = 0
         return pd.Series(market_caps)
 
-    def fetch_ticker_info(self, ticker_symbol: str) -> Dict:
+    def fetch_ticker_info(self, ticker: str) -> Dict:
         """Fetch detailed information for a specific ticker symbol.
 
         Args:
@@ -104,10 +101,13 @@ class DataFetcher:
             sector, industry, and other relevant data.
 
         """
-        ticker_obj = self.provider.Ticker(ticker_symbol)
-        return getattr(ticker_obj, "info", {})
+        try:
+            return getattr(self.provider.Ticker(ticker), "info", {})
+        except Exception as e:
+            self._log_error(f"Failed to fetch info for {ticker}: {e}")
+            return {}
 
-    def fetch_cashflow(self, ticker_symbol: str):
+    def fetch_cashflow(self, ticker: str):
         """Fetch the cash flow statement for a specific ticker symbol.
 
         Args:
@@ -117,16 +117,18 @@ class DataFetcher:
             _type_: Cash flow statement as a DataFrame or None if not available.
 
         """
-        ticker_obj = self.provider.Ticker(ticker_symbol)
-        return getattr(ticker_obj, "cashflow", None)
+        try:
+            return getattr(self.provider.Ticker(ticker), "cashflow", None)
+        except Exception as e:
+            self._log_error(f"Failed to fetch cashflow for {ticker}: {e}")
+            return None
 
     def _extract_close_prices(self, data: pd.DataFrame) -> pd.DataFrame:
         if isinstance(data.columns, pd.MultiIndex):
             return data["Close"]
         elif "Close" in data.columns:
             return data[["Close"]]
-        else:
-            raise ValueError("No 'Close' column found in price data.")
+        raise ValueError("No 'Close' column found in price data.")
 
     def _warn_missing_tickers(self, requested: List[str], received) -> None:
         missing = set(requested) - set(received)
