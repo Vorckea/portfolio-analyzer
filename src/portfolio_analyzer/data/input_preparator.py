@@ -9,7 +9,6 @@ final inputs (mean returns, covariance) for the optimizer.
 import logging
 from typing import List, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 from sklearn.covariance import LedoitWolf
 
@@ -21,6 +20,7 @@ from ..return_estimator.blended_return import BlendedReturn
 from ..return_estimator.capm_return_estimator import CAPMReturnEstimator
 from ..return_estimator.ewma_return import EWMAReturn
 from ..utils.exceptions import DataFetchingError
+from ..utils.util import calculate_log_returns
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +194,7 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
         data_fetcher=data_fetcher,
     )
     dcf_views = capm_return_estimator.get_returns()
-    log_returns = _calculate_log_returns(close_df)
+    log_returns = calculate_log_returns(close_df)
 
     # Build model inputs
     (
@@ -223,8 +223,3 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
     )
     logger.info("--- Data Pipeline Finished ---")
     return model_inputs
-
-
-def _calculate_log_returns(close_df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate daily logarithmic returns from a DataFrame of closing prices."""
-    return np.log(close_df / close_df.shift(1)).dropna()

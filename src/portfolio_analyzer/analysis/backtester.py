@@ -21,6 +21,8 @@ from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.core.portfolio_optimizer import PortfolioOptimizer
 from portfolio_analyzer.data.data_fetcher import DataFetcher
 
+from ..utils.util import calculate_log_returns
+
 logger = logging.getLogger(__name__)
 
 
@@ -113,7 +115,7 @@ class Backtester:
             return pd.DataFrame(), {}
         logger.info("Running backtest with %d valid tickers.", len(valid_tickers))
 
-        full_log_returns = np.log(full_price_data / full_price_data.shift(1))
+        full_log_returns = calculate_log_returns(full_price_data)
 
         # 3. Set up rebalancing dates and portfolio tracking
         rebalance_dates = pd.date_range(

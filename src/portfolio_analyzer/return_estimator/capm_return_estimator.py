@@ -1,10 +1,10 @@
-import numpy as np
 import pandas as pd
 
 from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
 
 from ..config.config import AppConfig
 from ..data.data_fetcher import DataFetcher
+from ..utils.util import calculate_log_returns
 
 
 class CAPMReturnEstimator(ReturnEstimator):
@@ -29,9 +29,7 @@ class CAPMReturnEstimator(ReturnEstimator):
                 self.config.date_range.start.strftime("%Y-%m-%d"),
                 self.config.date_range.end.strftime("%Y-%m-%d"),
             )
-            log_returns = (
-                (price_data / price_data.shift(1)).apply(lambda x: pd.Series(np.log(x))).dropna()
-            )
+            log_returns = calculate_log_returns(price_data)
             er_market = log_returns.mean().iloc[0] * self.config.trading_days_per_year
 
         returns = {}
