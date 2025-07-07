@@ -87,7 +87,7 @@ def build_model_inputs(
         config (AppConfig): The application configuration object.
         market_cap_weights (Optional[pd.Series]): Market cap weights for assets.
             Required for Black-Litterman.
-        dcf_views (Optional[Dict[str, float]]): Views on asset returns, typically
+        dcf_views (Optional[pd.Series]): Views on asset returns, typically
             from a DCF model. Required for Black-Litterman.
 
     Returns:
