@@ -10,6 +10,7 @@ import logging
 from typing import List, Optional, Tuple
 
 import pandas as pd
+import yfinance as yf
 from sklearn.covariance import LedoitWolf
 
 from ..config.config import AppConfig
@@ -43,50 +44,41 @@ def _apply_black_litterman_model(
     risk_free_rate: float,
     risk_aversion: float,
     covariance_matrix: pd.DataFrame,
-    market_cap_weights: pd.Series,
     tau: float,
     dcf_views: pd.Series = None,
     config: AppConfig | None = None,
 ) -> Optional[BlackLittermanReturn]:
-    if market_cap_weights is None or market_cap_weights.empty:
-        return None
     if dcf_views is None or dcf_views.empty:
         return None
 
     log_returns = log_returns.sort_index(axis=1)
     covariance_matrix = covariance_matrix.loc[log_returns.columns, log_returns.columns]
-    market_cap_weights = market_cap_weights.reindex(log_returns.columns).fillna(0.0)
-
     view_vector = dcf_views.copy()
 
     return BlackLittermanReturn(
         log_returns=log_returns,
         risk_free_rate=risk_free_rate,
         risk_aversion=risk_aversion,
-        market_cap_weights=market_cap_weights,
         tau=tau,
         view_vector=view_vector,
         config=config,
+        data_fetcher=DataFetcher(yf),
     )
 
 
 def build_model_inputs(
     log_returns: pd.DataFrame,
     config: AppConfig,
-    market_cap_weights: Optional[pd.Series] = None,
     dcf_views: Optional[pd.Series] = None,
 ) -> Tuple[pd.Series, pd.DataFrame, pd.Series, Optional[pd.Series], List[str]]:
     """Build the final model inputs from processed log returns and views.
 
-    This is a core component of the data pipeline that takes log returns and
-    optional market cap weights and DCF views to produce the final mean
+    This is a core component of the data pipeline that takes log returns and DCF views to produce the final mean
     return vector and covariance matrix for optimization.
 
     Args:
         log_returns (pd.DataFrame): DataFrame of daily log returns for assets.
         config (AppConfig): The application configuration object.
-        market_cap_weights (Optional[pd.Series]): Market cap weights for assets.
-            Required for Black-Litterman.
         dcf_views (Optional[pd.Series]): Views on asset returns, typically
             from a DCF model. Required for Black-Litterman.
 
@@ -112,7 +104,6 @@ def build_model_inputs(
         risk_free_rate=config.risk_free_rate,
         risk_aversion=config.black_litterman.delta,
         covariance_matrix=cov_matrix_annualized,
-        market_cap_weights=market_cap_weights,
         tau=config.black_litterman.tau,
         dcf_views=dcf_views,
         config=config,
@@ -165,7 +156,6 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
     logger.info("DCF Views Enabled: %s", config.use_dcf_views)
 
     # Fetch data
-    market_cap_series = data_fetcher.fetch_market_caps(config.tickers)
     try:
         close_df = data_fetcher.fetch_price_data(
             tickers=config.tickers,
@@ -177,16 +167,6 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
         raise DataFetchingError("Failed to fetch price data.") from e
     final_tickers_list = close_df.columns.tolist()
     logger.info("Proceeding with %d tickers that have valid price data.", len(final_tickers_list))
-
-    # Market cap weights
-    w_mkt = pd.Series(dtype=float)
-    if not market_cap_series.empty:
-        w_mkt_filtered = market_cap_series.reindex(final_tickers_list).dropna()
-        if not w_mkt_filtered.empty:
-            w_mkt = w_mkt_filtered / w_mkt_filtered.sum()
-            logger.info("Successfully normalized market cap weights for %d tickers.", len(w_mkt))
-        else:
-            logger.warning("No market cap data available for the filtered tickers.")
 
     # DCF views (Via CAPM estimator)
     capm_return_estimator = CAPMReturnEstimator(
@@ -206,7 +186,6 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
     ) = build_model_inputs(
         log_returns=log_returns,
         config=config,
-        market_cap_weights=w_mkt,
         dcf_views=dcf_views,
     )
 
@@ -216,7 +195,6 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
         cov_matrix=cov_matrix,
         log_returns=log_returns.reindex(columns=final_tickers),
         close_df=close_df.reindex(columns=final_tickers),
-        w_mkt=w_mkt.reindex(final_tickers).fillna(0),
         final_tickers=final_tickers,
         hist_mean_returns=hist_mean_returns,
         implied_equilibrium_returns=implied_equilibrium_returns,

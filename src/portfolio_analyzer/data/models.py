@@ -15,7 +15,6 @@ class ModelInputs:
         log_returns (pd.DataFrame): The historical log returns of the assets.
         close_df (pd.DataFrame): The historical closing prices of the assets.
         final_tickers (List[str]): The list of tickers included in the final model.
-        w_mkt (pd.Series): Market weights of the assets, indexed by tickers.
         hist_mean_returns (pd.Series): Historical mean returns before any blending.
         implied_equilibrium_returns (Optional[pd.Series]): Market-implied returns
             from the Black-Litterman model.
@@ -27,7 +26,6 @@ class ModelInputs:
     log_returns: pd.DataFrame
     close_df: pd.DataFrame
     final_tickers: list[str]
-    w_mkt: pd.Series
     hist_mean_returns: Optional[pd.Series] = None
     implied_equilibrium_returns: Optional[pd.Series] = None
 

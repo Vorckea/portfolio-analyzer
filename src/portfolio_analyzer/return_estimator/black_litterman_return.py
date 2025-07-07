@@ -4,6 +4,8 @@ import pandas as pd
 from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
 
+from ..data.data_fetcher import DataFetcher
+
 
 class BlackLittermanReturn(ReturnEstimator):
     def __init__(
@@ -11,17 +13,18 @@ class BlackLittermanReturn(ReturnEstimator):
         log_returns: pd.DataFrame,
         risk_free_rate: float,
         risk_aversion: float,
-        market_cap_weights: pd.Series,
         tau: float,
         view_vector: pd.Series,
         assets_in_view: pd.DataFrame = None,
         view_confidence: pd.DataFrame = None,
         config: AppConfig = None,
+        data_fetcher: DataFetcher = None,
     ):
         # Align tickers and ensure consistent ordering
-        self.tickers = self._align_tickers(log_returns, market_cap_weights)
         self.config = config or AppConfig.get_instance()
-
+        self.data_fetcher = data_fetcher
+        market_cap_weights = self._calculate_market_cap_weights(log_returns)
+        self.tickers = self._align_tickers(log_returns, market_cap_weights)
         self.log_returns = log_returns[self.tickers]
         self.risk_free_rate = risk_free_rate
         self.risk_aversion = risk_aversion
@@ -46,6 +49,17 @@ class BlackLittermanReturn(ReturnEstimator):
         self.excess_returns_cov = self._excess_returns_covariance()
         self.implied_equilibrium_returns = self._implied_excess_equilibrium_returns()
         self.posterior_returns = self._posterior_returns()
+
+    def _calculate_market_cap_weights(self, log_returns: pd.DataFrame) -> pd.Series:
+        tickers = log_returns.columns.tolist()
+        market_cap = self.data_fetcher.fetch_market_caps(tickers)
+        if market_cap is None or market_cap.empty:
+            raise ValueError("Market cap weights cannot be None or empty.")
+        market_cap_weights = market_cap / market_cap.sum()
+        if market_cap_weights is None or market_cap_weights.empty:
+            raise ValueError("Market cap weights cannot be None or empty.")
+
+        return market_cap_weights.reindex(tickers).fillna(0.0)
 
     @staticmethod
     def _align_tickers(log_returns: pd.DataFrame, market_cap_weights: pd.Series) -> pd.Index:
@@ -89,24 +103,6 @@ class BlackLittermanReturn(ReturnEstimator):
             columns=assets,
         ).sort_index()
         return Omega
-
-    def _validate_dimensions(self):
-        assert all(self.assets_in_view.columns == self.market_cap_weights.index), (
-            "Asset columns not aligned!"
-        )
-        assert all(self.excess_returns_cov.columns == self.market_cap_weights.index), (
-            "Covariance columns not aligned!"
-        )
-
-        assert all(self.assets_in_view.index == self.view_confidence.index), (
-            "View indices not aligned!"
-        )
-        assert all(self.view_confidence.index == self.view_confidence.columns), (
-            "View confidence matrix not square/aligned!"
-        )
-        assert all(self.assets_in_view.index == self.view_vector.index), (
-            "View vector and assets_in_view not aligned!"
-        )
 
     def _implied_excess_equilibrium_returns(self) -> pd.Series:
         """Compute the implied equilibrium excess returns (Pi) using the CAPM prior.
