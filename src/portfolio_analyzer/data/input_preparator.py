@@ -32,13 +32,11 @@ def _calculate_annualized_covariance(
     """Calculate the annualized covariance matrix using Ledoit-Wolf shrinkage."""
     lw = LedoitWolf()
     lw.fit(log_returns)
-    cov_matrix = pd.DataFrame(
-        lw.covariance_ * trading_days,
+    return pd.DataFrame(
+        data=lw.covariance_ * trading_days,
         index=log_returns.columns,
         columns=log_returns.columns,
     )
-    logger.debug("Calculated annualized covariance matrix shape: %s", cov_matrix.shape)
-    return cov_matrix
 
 
 def _apply_black_litterman_model(
@@ -50,20 +48,19 @@ def _apply_black_litterman_model(
     tau: float,
     dcf_views: pd.Series = None,
     config: AppConfig | None = None,
-) -> BlackLittermanReturn:
+) -> Optional[BlackLittermanReturn]:
     if market_cap_weights is None or market_cap_weights.empty:
+        return None
+    if dcf_views is None or dcf_views.empty:
         return None
 
     log_returns = log_returns.sort_index(axis=1)
     covariance_matrix = covariance_matrix.loc[log_returns.columns, log_returns.columns]
     market_cap_weights = market_cap_weights.reindex(log_returns.columns).fillna(0.0)
 
-    if dcf_views is None or dcf_views.empty:
-        return None
-
     view_vector = dcf_views.copy()
 
-    bl_model = BlackLittermanReturn(
+    return BlackLittermanReturn(
         log_returns=log_returns,
         risk_free_rate=risk_free_rate,
         risk_aversion=risk_aversion,
@@ -72,8 +69,6 @@ def _apply_black_litterman_model(
         view_vector=view_vector,
         config=config,
     )
-
-    return bl_model
 
 
 def build_model_inputs(
@@ -103,25 +98,16 @@ def build_model_inputs(
             final tickers.
 
     """
-    # 1. Calculate historical mean returns with EWMA and shrinkage
-
     ewma = EWMAReturn(
         log_returns=log_returns,
         span=config.ewma_span,
         trading_days=config.trading_days_per_year,
         shrinkage_factor=config.mean_shrinkage_alpha,
     )
-
     hist_mean_returns = ewma.get_shrinked_ewma_returns()
-
-    logger.debug("Calculated historical mean returns shape: %s", hist_mean_returns.shape)
-
-    # 2. Calculate annualized covariance matrix
     cov_matrix_annualized = _calculate_annualized_covariance(
         log_returns, config.trading_days_per_year
     )
-
-    # 3. Initialize returns and run Black-Litterman model if applicable
     bl_model = _apply_black_litterman_model(
         log_returns=log_returns,
         risk_free_rate=config.risk_free_rate,
@@ -132,27 +118,21 @@ def build_model_inputs(
         dcf_views=dcf_views,
         config=config,
     )
-
-    implied_equilibrium_returns = bl_model.get_implied_equilibrium_returns()
+    implied_equilibrium_returns = bl_model.get_implied_equilibrium_returns() if bl_model else None
 
     blended_returns = BlendedReturn(
         [
-            (bl_model, 1 - config.black_litterman.momentum_blend_weight),
+            (bl_model, 1 - config.black_litterman.momentum_blend_weight) if bl_model else None,
             (ewma, config.black_litterman.momentum_blend_weight),
         ],
     )
-
     final_mean_returns = blended_returns.get_returns()
-
-    # 5. Final alignment and packaging
     common_tickers = sorted(
         list(final_mean_returns.index.intersection(cov_matrix_annualized.index))
     )
     final_mean_returns = final_mean_returns.reindex(common_tickers)
     final_cov_matrix = cov_matrix_annualized.reindex(index=common_tickers, columns=common_tickers)
-
     logger.info("Core calculations complete. Finalized with %d tickers.", len(common_tickers))
-
     return (
         final_mean_returns,
         final_cov_matrix,
@@ -265,8 +245,5 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
 
 
 def _calculate_log_returns(close_df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate daily logarithmic returns from a DataFrame of closing prices.
-
-    Internal helper function.
-    """
+    """Calculate daily logarithmic returns from a DataFrame of closing prices."""
     return np.log(close_df / close_df.shift(1)).dropna()
