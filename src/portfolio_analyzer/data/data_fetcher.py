@@ -94,7 +94,7 @@ class DataFetcher:
         """Fetch detailed information for a specific ticker symbol.
 
         Args:
-            ticker_symbol (str): Ticker symbol to fetch information for.
+            ticker (str): Ticker symbol to fetch information for.
 
         Returns:
             Dict: Dictionary containing detailed information about the ticker, such as market cap,
@@ -111,10 +111,10 @@ class DataFetcher:
         """Fetch the cash flow statement for a specific ticker symbol.
 
         Args:
-            ticker_symbol (str): Ticker symbol to fetch cash flow data for.
+            ticker (str): Ticker symbol to fetch cash flow data for.
 
         Returns:
-            _type_: Cash flow statement as a DataFrame or None if not available.
+            pd.DataFrame or None: Cash flow statement as a DataFrame or None if not available.
 
         """
         try:
