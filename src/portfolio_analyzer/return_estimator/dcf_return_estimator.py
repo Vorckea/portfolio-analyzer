@@ -115,6 +115,7 @@ class DCFReturnEstimator(ReturnEstimator):
         wacc = self._calculate_wacc(data)
         pv_fcf_list = []
         last_fcf = data["fcf"]
+        print(last_fcf)
         current_year = 0
         stage1_growth_rate = self._get_adaptive_growth_rate(data)
 

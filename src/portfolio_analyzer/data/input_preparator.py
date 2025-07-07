@@ -18,11 +18,10 @@ from portfolio_analyzer.data.data_fetcher import DataFetcher
 from portfolio_analyzer.data.models import ModelInputs
 from portfolio_analyzer.return_estimator.black_litterman_return import BlackLittermanReturn
 from portfolio_analyzer.return_estimator.blended_return import BlendedReturn
-from portfolio_analyzer.return_estimator.dcf_return_estimator import DCFReturnEstimator
 from portfolio_analyzer.return_estimator.ewma_return import EWMAReturn
 from portfolio_analyzer.utils.exceptions import DataFetchingError
 
-from ..return_estimator.fill_nan_return import FillNaNReturn
+from ..return_estimator.capm_return_estimator import CAPMReturnEstimator
 
 logger = logging.getLogger(__name__)
 
@@ -213,24 +212,26 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
             logger.warning("No market cap data available for the filtered tickers.")
 
     # 4. Calculate DCF views and log returns
-    dcf_return_estimator = DCFReturnEstimator(
-        tickers=final_tickers_list,
-        risk_free_rate=config.risk_free_rate,
-        data_fetcher=data_fetcher,
+    # dcf_return_estimator = DCFReturnEstimator(
+    #    tickers=final_tickers_list,
+    #    risk_free_rate=config.risk_free_rate,
+    #    data_fetcher=data_fetcher,
+    #    config=config,
+    # )
+
+    ewma_return_estimator = EWMAReturn(
+        log_returns=_calculate_log_returns(close_df),
+        span=config.trading_days_per_year,
+        trading_days=config.trading_days_per_year,
+        shrinkage_factor=0.5,
+    )
+
+    capm_return_estimator = CAPMReturnEstimator(
         config=config,
+        data_fetcher=data_fetcher,
     )
 
-    filled_return_estimator = FillNaNReturn(
-        returns=dcf_return_estimator,
-        replacement_returns=EWMAReturn(
-            log_returns=_calculate_log_returns(close_df),
-            span=270,
-            trading_days=config.trading_days_per_year,
-            shrinkage_factor=0.5,
-        ),
-    )
-
-    dcf_views = filled_return_estimator.get_returns()
+    dcf_views = capm_return_estimator.get_returns()
     log_returns = _calculate_log_returns(close_df)
 
     # 5. Get calculated inputs from the core builder function
