@@ -165,7 +165,7 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
     )
     logger.info("DCF Views Enabled: %s", config.use_dcf_views)
 
-    # 1. Fetch all raw data first
+    # Fetch data
     market_cap_series = data_fetcher.fetch_market_caps(config.tickers)
     try:
         close_df = data_fetcher.fetch_price_data(
@@ -176,12 +176,10 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
     except ValueError as e:
         logger.error("Data fetching failed with a ValueError, cannot proceed.", exc_info=True)
         raise DataFetchingError("Failed to fetch price data.") from e
-
-    # 2. Define the final list of tickers based on successful price data.
     final_tickers_list = close_df.columns.tolist()
     logger.info("Proceeding with %d tickers that have valid price data.", len(final_tickers_list))
 
-    # 3. Filter and re-normalize market cap weights to match the final tickers
+    # Market cap weights
     w_mkt = pd.Series(dtype=float)
     if not market_cap_series.empty:
         w_mkt_filtered = market_cap_series.reindex(final_tickers_list).dropna()
@@ -191,30 +189,15 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
         else:
             logger.warning("No market cap data available for the filtered tickers.")
 
-    # 4. Calculate DCF views and log returns
-    # dcf_return_estimator = DCFReturnEstimator(
-    #    tickers=final_tickers_list,
-    #    risk_free_rate=config.risk_free_rate,
-    #    data_fetcher=data_fetcher,
-    #    config=config,
-    # )
-
-    ewma_return_estimator = EWMAReturn(
-        log_returns=_calculate_log_returns(close_df),
-        span=config.trading_days_per_year,
-        trading_days=config.trading_days_per_year,
-        shrinkage_factor=0.5,
-    )
-
+    # DCF views (Via CAPM estimator)
     capm_return_estimator = CAPMReturnEstimator(
         config=config,
         data_fetcher=data_fetcher,
     )
-
     dcf_views = capm_return_estimator.get_returns()
     log_returns = _calculate_log_returns(close_df)
 
-    # 5. Get calculated inputs from the core builder function
+    # Build model inputs
     (
         mean_returns,
         cov_matrix,
@@ -228,7 +211,7 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
         dcf_views=dcf_views,
     )
 
-    # 6. Assemble the final ModelInputs object with all required data
+    # Assemble ModelInputs dataclass
     model_inputs = ModelInputs(
         mean_returns=mean_returns,
         cov_matrix=cov_matrix,
@@ -239,7 +222,6 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
         hist_mean_returns=hist_mean_returns,
         implied_equilibrium_returns=implied_equilibrium_returns,
     )
-
     logger.info("--- Data Pipeline Finished ---")
     return model_inputs
 
