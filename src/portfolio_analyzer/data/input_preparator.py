@@ -13,15 +13,14 @@ import numpy as np
 import pandas as pd
 from sklearn.covariance import LedoitWolf
 
-from portfolio_analyzer.config.config import AppConfig
-from portfolio_analyzer.data.data_fetcher import DataFetcher
-from portfolio_analyzer.data.models import ModelInputs
-from portfolio_analyzer.return_estimator.black_litterman_return import BlackLittermanReturn
-from portfolio_analyzer.return_estimator.blended_return import BlendedReturn
-from portfolio_analyzer.return_estimator.ewma_return import EWMAReturn
-from portfolio_analyzer.utils.exceptions import DataFetchingError
-
+from ..config.config import AppConfig
+from ..data.data_fetcher import DataFetcher
+from ..data.models import ModelInputs
+from ..return_estimator.black_litterman_return import BlackLittermanReturn
+from ..return_estimator.blended_return import BlendedReturn
 from ..return_estimator.capm_return_estimator import CAPMReturnEstimator
+from ..return_estimator.ewma_return import EWMAReturn
+from ..utils.exceptions import DataFetchingError
 
 logger = logging.getLogger(__name__)
 
