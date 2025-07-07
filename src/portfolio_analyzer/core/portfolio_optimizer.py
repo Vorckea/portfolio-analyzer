@@ -4,18 +4,18 @@ This module provides the PortfolioOptimizer class and supporting functions
 for optimizing asset allocations using mean-variance analysis and regularization.
 """
 
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
 from portfolio_analyzer.config.config import AppConfig
-from portfolio_analyzer.core import objectives
 from portfolio_analyzer.core.objectives import (
     negative_sharpe_ratio,
     portfolio_return,
     portfolio_volatility,
+    sharpe_ratio,
 )
 from portfolio_analyzer.data.models import PortfolioResult
 from portfolio_analyzer.utils.exceptions import InputAlignmentError, OptimizationError
@@ -37,65 +37,18 @@ class PortfolioOptimizer:
             InputAlignmentError: If the inputs have no common tickers.
 
         """
+        common_tickers = mean_returns.index.intersection(cov_matrix.index)
+        if common_tickers.empty:
+            raise InputAlignmentError("Mean returns and covariance matrix have no common tickers.")
+
         if not mean_returns.index.equals(cov_matrix.index):
-            common_tickers = sorted(list(set(mean_returns.index) & set(cov_matrix.index)))
-            if not common_tickers:
-                raise InputAlignmentError(
-                    "Mean returns and covariance matrix have no common tickers."
-                )
+            mean_returns = mean_returns.loc[common_tickers]
+            cov_matrix = cov_matrix.loc[common_tickers, common_tickers]
 
-            self.mean_returns = mean_returns.loc[common_tickers]
-            self.cov_matrix = cov_matrix.loc[common_tickers, common_tickers]
-            self.tickers = common_tickers
-            print(
-                f"Warning: Input have mismatched tickers. Using {len(common_tickers)} common tickers."
-            )
-        else:
-            self.mean_returns = mean_returns
-            self.cov_matrix = cov_matrix
-            self.tickers = list(mean_returns.index)
-
+        self.mean_returns = mean_returns
+        self.cov_matrix = cov_matrix
+        self.tickers = list(mean_returns.index)
         self.config = config
-
-    def _create_result_from_weights(self, weights: np.ndarray) -> PortfolioResult:
-        """Create a PortfolioResult object from a set of weights.
-
-        Internal helper to standardize result creation after an optimization.
-        """
-        final_weights = pd.Series(weights, index=self.tickers)
-        final_weights = final_weights[final_weights > self.config.optimization.min_weight_per_asset]
-        if final_weights.empty:
-            return PortfolioResult(success=False)
-
-        final_weights /= final_weights.sum()
-
-        mean_returns_filtered = self.mean_returns.loc[final_weights.index]
-        cov_matrix_filtered = self.cov_matrix.loc[final_weights.index, final_weights.index]
-
-        log_return = portfolio_return(final_weights.values, mean_returns_filtered.values)
-        std_dev = portfolio_volatility(final_weights.values, cov_matrix_filtered.values)
-        sharpe_ratio = objectives.sharpe_ratio(
-            final_weights.values,
-            mean_returns_filtered.values,
-            cov_matrix_filtered.values,
-            self.config.risk_free_rate,
-        )
-        arithmetic_return = np.exp(log_return) - 1
-        display_sharpe = (
-            (arithmetic_return - self.config.risk_free_rate) / std_dev if std_dev != 0 else 0
-        )
-
-        return PortfolioResult(
-            success=True,
-            opt_weights=final_weights,
-            mean_returns=mean_returns_filtered,
-            cov_matrix=cov_matrix_filtered,
-            log_return=log_return,
-            std_dev=std_dev,
-            sharpe_ratio=sharpe_ratio,
-            arithmetic_return=arithmetic_return,
-            display_sharpe=display_sharpe,
-        )
 
     def optimize(self, lambda_reg: float) -> Optional[PortfolioResult]:
         """Perform portfolio optimization to find the tangency portfolio.
@@ -112,16 +65,12 @@ class PortfolioOptimizer:
                 optimization, or None if it fails.
 
         """
-        return self._perform_core_optimization(lambda_val=lambda_reg)
+        return self._perform_core_optimization(lambda_reg)
 
     def _perform_core_optimization(self, lambda_val: float) -> PortfolioResult:
-        """The core optimization routine using scipy.optimize.minimize.
-
-        Internal helper for the `optimize` method.
-        """
         num_asset = len(self.tickers)
         if num_asset == 0:
-            return PortfolioResult(success=False)
+            raise OptimizationError("No assets to optimize.")
 
         constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
         bounds = tuple((0, self.config.optimization.max_weight_per_asset) for _ in range(num_asset))
@@ -142,11 +91,44 @@ class PortfolioOptimizer:
         )
 
         if not opt_result.success:
-            raise OptimizationError(
-                f"Portfolio optimization failed to converge: {opt_result.message}"
-            )
+            raise OptimizationError(f"Portfolio optimization failed: {opt_result.message}")
 
         return self._create_result_from_weights(opt_result.x)
+
+    def _create_result_from_weights(self, weights: np.ndarray) -> PortfolioResult:
+        final_weights = pd.Series(weights, index=self.tickers)
+        final_weights = final_weights[final_weights > self.config.optimization.min_weight_per_asset]
+        if final_weights.empty:
+            return PortfolioResult(success=False)
+
+        final_weights /= final_weights.sum()
+        mean_returns_filtered = self.mean_returns.loc[final_weights.index]
+        cov_matrix_filtered = self.cov_matrix.loc[final_weights.index, final_weights.index]
+
+        log_return = portfolio_return(final_weights.values, mean_returns_filtered.values)
+        std_dev = portfolio_volatility(final_weights.values, cov_matrix_filtered.values)
+        s_ratio = sharpe_ratio(
+            final_weights.values,
+            mean_returns_filtered.values,
+            cov_matrix_filtered.values,
+            self.config.risk_free_rate,
+        )
+        arithmetic_return = np.exp(log_return) - 1
+        display_sharpe = (
+            (arithmetic_return - self.config.risk_free_rate) / std_dev if std_dev != 0 else 0
+        )
+
+        return PortfolioResult(
+            success=True,
+            opt_weights=final_weights,
+            mean_returns=mean_returns_filtered,
+            cov_matrix=cov_matrix_filtered,
+            log_return=log_return,
+            std_dev=std_dev,
+            sharpe_ratio=s_ratio,
+            arithmetic_return=arithmetic_return,
+            display_sharpe=display_sharpe,
+        )
 
     def calculate_efficient_frontier(
         self, num_points: int = 100
@@ -195,14 +177,12 @@ class PortfolioOptimizer:
         if not max_sharpe_result or not max_sharpe_result.success:
             raise OptimizationError("Could not find the maximum Sharpe ratio portfolio.")
 
-        # 3. Determine range of returns for the frontier plot
         min_return_log = min_vol_result.log_return
-        # Use the higher of the max sharpe or max individual asset return for the range
         max_return_log = max(max_sharpe_result.log_return, self.mean_returns.max())
         target_log_returns = np.linspace(min_return_log, max_return_log, num_points)
 
         # 4. Calculate frontier points by minimizing volatility for each target return
-        frontier_portfolios = []
+        frontier_portfolios: List[dict] = []
         for target_return in target_log_returns:
             constraints = [
                 {"type": "eq", "fun": lambda w: np.sum(w) - 1},
