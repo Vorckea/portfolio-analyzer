@@ -59,19 +59,18 @@ def build_model_inputs(
         data_fetcher=DataFetcher(yf),
     )
 
-    hist_mean_returns = ewma.get_returns()
-    cov_matrix_annualized = calculate_annualized_covariance(
-        log_returns, config.trading_days_per_year
-    )
-
-    implied_equilibrium_returns = bl_model.get_implied_equilibrium_returns() if bl_model else None
-
     blended_returns = BlendedReturn(
         [
             (bl_model, 1 - config.black_litterman.momentum_blend_weight) if bl_model else None,
             (ewma, config.black_litterman.momentum_blend_weight),
         ],
     )
+
+    hist_mean_returns = ewma.get_returns()
+    cov_matrix_annualized = calculate_annualized_covariance(
+        log_returns, config.trading_days_per_year
+    )
+    implied_equilibrium_returns = bl_model.get_implied_equilibrium_returns() if bl_model else None
     final_mean_returns = blended_returns.get_returns()
     common_tickers = sorted(
         list(final_mean_returns.index.intersection(cov_matrix_annualized.index))
