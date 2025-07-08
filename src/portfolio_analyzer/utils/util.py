@@ -1,3 +1,9 @@
+"""Utility functions for portfolio analysis.
+
+This module provides functions to calculate log returns and annualized covariance matrices
+using Ledoit-Wolf shrinkage for financial time series data.
+"""
+
 import numpy as np
 import pandas as pd
 from sklearn.covariance import LedoitWolf
