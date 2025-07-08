@@ -10,7 +10,6 @@ import logging
 from typing import List, Optional, Tuple
 
 import pandas as pd
-import yfinance as yf
 
 from ..config.config import AppConfig
 from ..data.data_fetcher import DataFetcher
@@ -28,42 +27,36 @@ logger = logging.getLogger(__name__)
 def build_model_inputs(
     log_returns: pd.DataFrame,
     config: AppConfig,
+    data_fetcher: DataFetcher,
     dcf_views: Optional[pd.Series] = None,
 ) -> Tuple[pd.Series, pd.DataFrame, pd.Series, Optional[pd.Series], List[str]]:
-    """Build the final model inputs from processed log returns and views.
-
-    This is a core component of the data pipeline that takes log returns and DCF views to produce the final mean
-    return vector and covariance matrix for optimization.
+    """Assamble the final model inputs from processed log returns and views.
 
     Args:
-        log_returns (pd.DataFrame): DataFrame of daily log returns for assets.
-        config (AppConfig): The application configuration object.
-        dcf_views (Optional[pd.Series]): Views on asset returns, typically
-            from a DCF model. Required for Black-Litterman.
+        log_returns (pd.DataFrame): DataFrame containing log returns for each ticker.
+        config (AppConfig): Application configuration object containing settings.
+        data_fetcher (DataFetcher): An instance of DataFetcher to retrieve price data.
+        dcf_views (Optional[pd.Series], optional): Optional DCF views to blend with the returns.
+            Defaults to None.
 
     Returns:
-        Tuple[pd.Series, pd.DataFrame, pd.Series, Optional[pd.Series], List[str]]:
-            A tuple containing the final mean returns, covariance matrix,
-            historical mean returns, implied equilibrium returns, and a list of
-            final tickers.
+        Tuple[pd.Series, pd.DataFrame, pd.Series, Optional[pd.Series], List[str]]: Tuple of
+            (mean_returns, cov_matrix, hist_mean_returns, implied_equilibrium_returns,
+            final_tickers).
 
     """
-    ewma = EWMAReturn(
-        data_fetcher=DataFetcher(yf),
-        config=config,
-    )
-
+    ewma = EWMAReturn(data_fetcher=data_fetcher, config=config)
     bl_model = BlackLittermanReturn(
         view_vector=dcf_views,
         config=config,
-        data_fetcher=DataFetcher(yf),
+        data_fetcher=data_fetcher,
     )
 
     blended_returns = BlendedReturn(
         [
             (bl_model, 1 - config.black_litterman.momentum_blend_weight) if bl_model else None,
             (ewma, config.black_litterman.momentum_blend_weight),
-        ],
+        ]
     )
 
     hist_mean_returns = ewma.get_returns()
@@ -90,17 +83,21 @@ def build_model_inputs(
 
 
 def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelInputs:
-    """Orchestrates the entire data preparation pipeline.
+    """Orchestrates the data preparation pipeline.
 
-    Fetches prices, calculates returns, and builds all necessary inputs for
-    the optimization models, returning them in a structured dataclass.
+    This function serves as the entry point for preparing model inputs for portfolio optimization.
 
     Args:
-        config (AppConfig): The application configuration object.
-        data_fetcher (DataFetcher): An instance of DataFetcher to retrieve data.
+        config (AppConfig): The application configuration object containing settings.
+        data_fetcher (DataFetcher): An instance of DataFetcher to retrieve price data.
+
+    Raises:
+        DataFetchingError: If data fetching fails, this error is raised to indicate
+            that the pipeline cannot proceed.
 
     Returns:
-        ModelInputs: A dataclass holding all the prepared data.
+        ModelInputs: A dataclass containing all necessary inputs for the portfolio optimization model,
+        including mean returns, covariance matrix, log returns, and final tickers.
 
     """
     logger.info(
@@ -111,7 +108,6 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
     )
     logger.info("DCF Views Enabled: %s", config.use_dcf_views)
 
-    # Fetch data
     try:
         close_df = data_fetcher.fetch_price_data(
             tickers=config.tickers,
@@ -121,18 +117,17 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
     except ValueError as e:
         logger.error("Data fetching failed with a ValueError, cannot proceed.", exc_info=True)
         raise DataFetchingError("Failed to fetch price data.") from e
-    final_tickers_list = close_df.columns.tolist()
-    logger.info("Proceeding with %d tickers that have valid price data.", len(final_tickers_list))
 
-    # DCF views (Via CAPM estimator)
+    final_tickers = close_df.columns.tolist()
+    logger.info("Proceeding with %d tickers that have valid price data.", len(final_tickers))
+
     capm_return_estimator = CAPMReturnEstimator(
         config=config,
         data_fetcher=data_fetcher,
     )
-    dcf_views = capm_return_estimator.get_returns()
+    views = capm_return_estimator.get_returns()
     log_returns = calculate_log_returns(close_df)
 
-    # Build model inputs
     (
         mean_returns,
         cov_matrix,
@@ -142,10 +137,10 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
     ) = build_model_inputs(
         log_returns=log_returns,
         config=config,
-        dcf_views=dcf_views,
+        data_fetcher=data_fetcher,
+        dcf_views=views,
     )
 
-    # Assemble ModelInputs dataclass
     model_inputs = ModelInputs(
         mean_returns=mean_returns,
         cov_matrix=cov_matrix,
