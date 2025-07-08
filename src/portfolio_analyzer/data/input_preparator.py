@@ -39,33 +39,6 @@ def _calculate_annualized_covariance(
     )
 
 
-def _apply_black_litterman_model(
-    log_returns: pd.DataFrame,
-    risk_free_rate: float,
-    risk_aversion: float,
-    covariance_matrix: pd.DataFrame,
-    tau: float,
-    dcf_views: pd.Series = None,
-    config: AppConfig | None = None,
-) -> Optional[BlackLittermanReturn]:
-    if dcf_views is None or dcf_views.empty:
-        return None
-
-    log_returns = log_returns.sort_index(axis=1)
-    covariance_matrix = covariance_matrix.loc[log_returns.columns, log_returns.columns]
-    view_vector = dcf_views.copy()
-
-    return BlackLittermanReturn(
-        log_returns=log_returns,
-        risk_free_rate=risk_free_rate,
-        risk_aversion=risk_aversion,
-        tau=tau,
-        view_vector=view_vector,
-        config=config,
-        data_fetcher=DataFetcher(yf),
-    )
-
-
 def build_model_inputs(
     log_returns: pd.DataFrame,
     config: AppConfig,
@@ -95,19 +68,22 @@ def build_model_inputs(
         trading_days=config.trading_days_per_year,
         shrinkage_factor=config.mean_shrinkage_alpha,
     )
+
+    bl_model = BlackLittermanReturn(
+        log_returns,
+        risk_free_rate=config.risk_free_rate,
+        risk_aversion=config.black_litterman.delta,
+        tau=config.black_litterman.tau,
+        view_vector=dcf_views,
+        config=config,
+        data_fetcher=DataFetcher(yf),
+    )
+
     hist_mean_returns = ewma.get_shrinked_ewma_returns()
     cov_matrix_annualized = _calculate_annualized_covariance(
         log_returns, config.trading_days_per_year
     )
-    bl_model = _apply_black_litterman_model(
-        log_returns=log_returns,
-        risk_free_rate=config.risk_free_rate,
-        risk_aversion=config.black_litterman.delta,
-        covariance_matrix=cov_matrix_annualized,
-        tau=config.black_litterman.tau,
-        dcf_views=dcf_views,
-        config=config,
-    )
+
     implied_equilibrium_returns = bl_model.get_implied_equilibrium_returns() if bl_model else None
 
     blended_returns = BlendedReturn(
@@ -142,6 +118,7 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
 
     Args:
         config (AppConfig): The application configuration object.
+        data_fetcher (DataFetcher): An instance of DataFetcher to retrieve data.
 
     Returns:
         ModelInputs: A dataclass holding all the prepared data.
