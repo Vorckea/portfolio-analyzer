@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import pandas as pd
 
@@ -12,8 +14,8 @@ class BlackLittermanReturn(ReturnEstimator):
     def __init__(
         self,
         view_vector: pd.Series,
-        assets_in_view: pd.DataFrame = None,
-        view_confidence: pd.DataFrame = None,
+        assets_in_view: Optional[pd.DataFrame] = None,
+        view_confidence: Optional[pd.DataFrame] = None,
         config: AppConfig = None,
         data_fetcher: DataFetcher = None,
     ):
