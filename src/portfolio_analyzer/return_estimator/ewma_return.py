@@ -2,12 +2,18 @@ import pandas as pd
 
 from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
 
+from ..config.config import AppConfig
+from ..data.data_fetcher import DataFetcher
+from ..utils.util import calculate_log_returns
+
 
 class EWMAReturn(ReturnEstimator):
     """Exponential Weighted Moving Average (EWMA) Return Estimator with optional shrinkage."""
 
     def __init__(
-        self, log_returns: pd.DataFrame, span: int, trading_days: int, shrinkage_factor: float = 0
+        self,
+        data_fetcher: DataFetcher,
+        config: AppConfig = None,
     ):
         """Exponential Weighted Moving Average (EWMA) Return Estimator with optional shrinkage.
 
@@ -19,10 +25,16 @@ class EWMAReturn(ReturnEstimator):
             Defaults to 0 (no shrinkage).
 
         """
-        self.log_returns = log_returns
-        self.span = span
-        self.trading_days = trading_days
-        self.shrinkage_factor = shrinkage_factor
+        self.config = config if config else AppConfig.get_instance()
+        self.data_fetcher = data_fetcher
+        self.log_returns = calculate_log_returns(
+            data_fetcher.fetch_price_data(
+                config.tickers, config.date_range.start, config.date_range.end
+            )
+        )
+        self.span = config.ewma_span
+        self.trading_days = config.trading_days_per_year
+        self.shrinkage_factor = config.mean_shrinkage_alpha
 
         self.ewma_returns = self._calculate_ewma_returns()
         self.shrinked_ewma_returns = self._apply_shrinkage()
@@ -55,6 +67,7 @@ class EWMAReturn(ReturnEstimator):
 
         Returns:
             pd.Series: Annualized EWMA returns
+
         """
         return self.ewma_returns
 

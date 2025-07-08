@@ -63,23 +63,17 @@ def build_model_inputs(
 
     """
     ewma = EWMAReturn(
-        log_returns=log_returns,
-        span=config.ewma_span,
-        trading_days=config.trading_days_per_year,
-        shrinkage_factor=config.mean_shrinkage_alpha,
+        data_fetcher=DataFetcher(yf),
+        config=config,
     )
 
     bl_model = BlackLittermanReturn(
-        log_returns,
-        risk_free_rate=config.risk_free_rate,
-        risk_aversion=config.black_litterman.delta,
-        tau=config.black_litterman.tau,
         view_vector=dcf_views,
         config=config,
         data_fetcher=DataFetcher(yf),
     )
 
-    hist_mean_returns = ewma.get_shrinked_ewma_returns()
+    hist_mean_returns = ewma.get_returns()
     cov_matrix_annualized = _calculate_annualized_covariance(
         log_returns, config.trading_days_per_year
     )

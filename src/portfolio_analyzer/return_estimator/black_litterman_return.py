@@ -5,15 +5,12 @@ from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
 
 from ..data.data_fetcher import DataFetcher
+from ..utils.util import calculate_log_returns
 
 
 class BlackLittermanReturn(ReturnEstimator):
     def __init__(
         self,
-        log_returns: pd.DataFrame,
-        risk_free_rate: float,
-        risk_aversion: float,
-        tau: float,
         view_vector: pd.Series,
         assets_in_view: pd.DataFrame = None,
         view_confidence: pd.DataFrame = None,
@@ -23,13 +20,19 @@ class BlackLittermanReturn(ReturnEstimator):
         # Align tickers and ensure consistent ordering
         self.config = config or AppConfig.get_instance()
         self.data_fetcher = data_fetcher
-        market_cap_weights = self._calculate_market_cap_weights(log_returns)
-        self.tickers = self._align_tickers(log_returns, market_cap_weights)
-        self.log_returns = log_returns[self.tickers]
-        self.risk_free_rate = risk_free_rate
-        self.risk_aversion = risk_aversion
+        self.log_returns = calculate_log_returns(
+            data_fetcher.fetch_price_data(
+                config.tickers, config.date_range.start, config.date_range.end
+            )
+        )
+        market_cap_weights = self._calculate_market_cap_weights(self.log_returns)
+        self.tickers = self._align_tickers(self.log_returns, market_cap_weights)
+        self.log_returns = self.log_returns[self.tickers]
+
+        self.risk_free_rate = config.risk_free_rate
+        self.risk_aversion = config.black_litterman.delta
         self.market_cap_weights = market_cap_weights.reindex(self.tickers)
-        self.tau = tau
+        self.tau = config.black_litterman.tau
 
         # Align view matrices/vectors
         self.view_vector = view_vector.sort_index()
