@@ -7,7 +7,7 @@ from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
 
 from ..data.data_fetcher import DataFetcher
-from ..utils.util import calculate_log_returns
+from ..utils.util import calculate_annualized_covariance, calculate_log_returns
 
 
 class BlackLittermanReturn(ReturnEstimator):
@@ -90,15 +90,11 @@ class BlackLittermanReturn(ReturnEstimator):
         return P.sort_index()
 
     def _generate_view_confidence(self, assets_in_view: pd.DataFrame) -> pd.DataFrame:
-        from sklearn.covariance import LedoitWolf
-
-        lw = LedoitWolf()
-        lw.fit(self.log_returns)
-        daily_cov = pd.DataFrame(
-            lw.covariance_,
-            index=self.tickers,
-            columns=self.tickers,
+        daily_cov = (
+            calculate_annualized_covariance(self.log_returns, self.config.trading_days_per_year)
+            / self.config.trading_days_per_year
         ).sort_index()
+
         tau = self.tau
         assets = assets_in_view.index
         view_variance = tau * daily_cov.loc[assets, assets].values.diagonal()

@@ -11,7 +11,6 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 import yfinance as yf
-from sklearn.covariance import LedoitWolf
 
 from ..config.config import AppConfig
 from ..data.data_fetcher import DataFetcher
@@ -21,22 +20,9 @@ from ..return_estimator.blended_return import BlendedReturn
 from ..return_estimator.capm_return_estimator import CAPMReturnEstimator
 from ..return_estimator.ewma_return import EWMAReturn
 from ..utils.exceptions import DataFetchingError
-from ..utils.util import calculate_log_returns
+from ..utils.util import calculate_annualized_covariance, calculate_log_returns
 
 logger = logging.getLogger(__name__)
-
-
-def _calculate_annualized_covariance(
-    log_returns: pd.DataFrame, trading_days: int = 252
-) -> pd.DataFrame:
-    """Calculate the annualized covariance matrix using Ledoit-Wolf shrinkage."""
-    lw = LedoitWolf()
-    lw.fit(log_returns)
-    return pd.DataFrame(
-        data=lw.covariance_ * trading_days,
-        index=log_returns.columns,
-        columns=log_returns.columns,
-    )
 
 
 def build_model_inputs(
@@ -74,7 +60,7 @@ def build_model_inputs(
     )
 
     hist_mean_returns = ewma.get_returns()
-    cov_matrix_annualized = _calculate_annualized_covariance(
+    cov_matrix_annualized = calculate_annualized_covariance(
         log_returns, config.trading_days_per_year
     )
 
