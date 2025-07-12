@@ -209,6 +209,8 @@ class AppConfig:
             "NORCO.OL",
             "EPR.OL",
             "SWED-A.ST",
+            "ORNBV.HE",
+            "MAERSK-B.CO",
             "0P00000MVB.IR",
             "0P0001IMY8.F",
             "0P00000B0I",
@@ -235,6 +237,7 @@ class AppConfig:
 
         Returns:
             AppConfig: The application configuration.
+
         """
         if cls._instance is None:
             cls._instance = cls()

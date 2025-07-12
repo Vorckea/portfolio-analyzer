@@ -46,6 +46,11 @@ def build_model_inputs(
 
     """
     ewma = EWMAReturn(data_fetcher=data_fetcher, config=config)
+
+    bl_ewma = BlackLittermanReturn(
+        view_vector=ewma.get_returns(), config=config, data_fetcher=data_fetcher
+    )
+
     bl_model = BlackLittermanReturn(
         view_vector=dcf_views,
         config=config,
@@ -55,7 +60,7 @@ def build_model_inputs(
     blended_returns = BlendedReturn(
         [
             (bl_model, 1 - config.black_litterman.momentum_blend_weight) if bl_model else None,
-            (ewma, config.black_litterman.momentum_blend_weight),
+            (bl_ewma, config.black_litterman.momentum_blend_weight),
         ]
     )
 
