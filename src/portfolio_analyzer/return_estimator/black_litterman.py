@@ -90,8 +90,31 @@ class BlackLitterman(ReturnEstimator):
         return P.sort_index()
 
     def _generate_view_confidence(self, assets_in_view: pd.DataFrame) -> pd.DataFrame:
+        cov = (
+            calculate_annualized_covariance(
+                log_returns=self.log_returns, trading_days=self.config.trading_days_per_year
+            )
+            / self.config.trading_days_per_year
+        ).sort_index()
+        tau = self.tau
+        P = assets_in_view.values
+        confidence = 0.95
+        view_variances = []
+        for i in range(P.shape[0]):
+            Pi = P[i, :]
+            variance = (1 - confidence) * (tau * Pi @ cov.values @ Pi.T)
+            view_variances.append(variance)
+        Omega = np.diag(view_variances)
+        return pd.DataFrame(
+            Omega, index=assets_in_view.index, columns=assets_in_view.index
+        ).sort_index()
+
+    def _generate_view_confidence_old(self, assets_in_view: pd.DataFrame) -> pd.DataFrame:
         daily_cov = (
-            calculate_annualized_covariance(self.log_returns, self.config.trading_days_per_year)
+            calculate_annualized_covariance(
+                log_returns=self.log_returns,
+                trading_days=self.config.trading_days_per_year,
+            )
             / self.config.trading_days_per_year
         ).sort_index()
 

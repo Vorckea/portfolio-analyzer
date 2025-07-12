@@ -1,18 +1,25 @@
 """Configuration module for the portfolio analyzer application."""
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List
+from typing import Any, ClassVar, Dict, List, Optional
+
+__all__ = [
+    "DataRangeConfig",
+    "OptimizationConfig",
+    "BlackLittermanConfig",
+    "DistributionModel",
+    "BacktestingConfig",
+    "MonteCarloConfig",
+    "DCFConfig",
+    "AppConfig",
+]
 
 
 @dataclass
 class DataRangeConfig:
-    """Configuration for the date range of historical data.
-
-    This class defines the start and end dates for fetching historical data.
-    It defaults to a 5-year range ending today, but can be customized.
-    """
+    """Date range for fetchinghistorical data."""
 
     end: datetime = field(default_factory=lambda: datetime.today())
     start: datetime = field(default_factory=lambda: datetime.today() - timedelta(days=5 * 365))
@@ -20,12 +27,7 @@ class DataRangeConfig:
 
 @dataclass
 class OptimizationConfig:
-    """Configuration for portfolio optimization parameters.
-
-    This class defines the parameters used in the optimization process,
-    including regularization, constraints on asset weights, and other
-    optimization-specific settings.
-    """
+    """Portfolio optimization parameters."""
 
     lambda_reg: float = 1.0
     max_weight_per_asset: float = 0.25
@@ -62,30 +64,13 @@ class BlackLittermanConfig:
 
     delta: float = 2.5
     tau: float = 0.05
-    # How much to blend the market-implied returns when no views are available.
-    equilibrium_blend_weight: float = 0.5
     # **NEW**: How much weight to give to historical momentum vs. BL valuation.
     # 0.0 = Pure Black-Litterman, 1.0 = Pure Historical Momentum.
     momentum_blend_weight: float = 0.3
 
 
 class DistributionModel(Enum):
-    """Enumeration for distribution models used in Monte Carlo simulations.
-
-    This enum defines the types of distributions that can be used for
-    Monte Carlo simulations in financial modeling. It includes options for
-    normal distribution and Student's T distribution. The choice of
-    distribution can significantly affect the simulation results, especially
-    in the presence of fat tails or skewness in asset returns.
-    It is important to select the appropriate distribution based on the
-    characteristics of the asset returns being modeled, as different
-    distributions can lead to different risk and return profiles in the
-    simulation results.
-
-    Args:
-        Enum (_type_): Enum class for defining distribution models used in Monte Carlo simulations.
-
-    """
+    """Distribution models for Monte Carlo simulations."""
 
     NORMAL = "Normal"
     STUDENT_T = "Student's T"
@@ -93,24 +78,11 @@ class DistributionModel(Enum):
 
 @dataclass
 class BacktestingConfig:
-    """Configuration for backtesting parameters.
-
-    This class defines the parameters used for backtesting portfolio strategies,
-    including the initial capital, rebalance frequency, and lookback period.
-    The rebalance frequency determines how often the portfolio is rebalanced,
-    while the lookback period specifies how much historical data is used for
-    optimization. These parameters are crucial for evaluating the performance
-    of portfolio strategies over time, allowing for adjustments based on market
-    conditions and historical performance. The initial capital sets the starting
-    amount for the backtest, which is used to calculate returns and portfolio
-    values over the backtesting period. The lookback period is particularly
-    important for strategies that rely on historical data to inform decisions,
-    as it determines the amount of data available for analysis and optimization.
-    """
+    """Backtesting parameters."""
 
     initial_capital: float = 100000.0
     rebalance_frequency: str = "3M"  # e.g., '1M', '3M', '1Y'
-    lookback_period_days: int = 3 * 365  # How much history to use for each optimization
+    lookback_period_days: int = 3 * 365
 
 
 @dataclass
@@ -217,7 +189,6 @@ class AppConfig:
         ]
     )
     use_dcf_views: bool = True
-
     date_range: DataRangeConfig = field(default_factory=DataRangeConfig)
     trading_days_per_year: int = 252
     risk_free_rate: float = 0.04074
@@ -229,7 +200,7 @@ class AppConfig:
     dcf: DCFConfig = field(default_factory=DCFConfig)
     backtesting: BacktestingConfig = field(default_factory=BacktestingConfig)
 
-    _instance: "AppConfig" = field(default=None, init=False, repr=False)
+    _instance: ClassVar[Optional["AppConfig"]] = None
 
     @classmethod
     def get_instance(cls) -> "AppConfig":
@@ -243,6 +214,7 @@ class AppConfig:
             cls._instance = cls()
         return cls._instance
 
+    @classmethod
     def set_instance(cls, config: "AppConfig"):
         """Explicitly set the singleton instance (useful for testing or custom configs)."""
         cls._instance = config
@@ -268,3 +240,6 @@ class AppConfig:
         from copy import deepcopy
 
         return deepcopy(self) if deep else self.__class__(**self.__dict__)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
