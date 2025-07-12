@@ -18,7 +18,7 @@ from portfolio_analyzer.analysis.metrics import (
     calculate_relative_metrics,
 )
 from portfolio_analyzer.config.config import AppConfig
-from portfolio_analyzer.core.portfolio_optimizer import PortfolioOptimizer
+from portfolio_analyzer.core.optimizer import PortfolioOptimizer
 from portfolio_analyzer.data.data_fetcher import DataFetcher
 
 from ..utils.util import calculate_log_returns

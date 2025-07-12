@@ -7,7 +7,7 @@ from ..data.data_fetcher import DataFetcher
 from ..utils.util import calculate_log_returns
 
 
-class CAPMReturnEstimator(ReturnEstimator):
+class CAPM(ReturnEstimator):
     # ER_i = R_f + B_i * (ER_m - R_f)
 
     def __init__(self, config: AppConfig, data_fetcher: DataFetcher):

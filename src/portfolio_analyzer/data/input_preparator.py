@@ -14,10 +14,10 @@ import pandas as pd
 from ..config.config import AppConfig
 from ..data.data_fetcher import DataFetcher
 from ..data.models import ModelInputs
-from ..return_estimator.black_litterman_return import BlackLittermanReturn
+from ..return_estimator.black_litterman import BlackLitterman
 from ..return_estimator.blended_return import BlendedReturn
-from ..return_estimator.capm_return_estimator import CAPMReturnEstimator
-from ..return_estimator.ewma_return import EWMAReturn
+from ..return_estimator.capm import CAPM
+from ..return_estimator.ewma import EWMA
 from ..utils.exceptions import DataFetchingError
 from ..utils.util import calculate_annualized_covariance, calculate_log_returns
 
@@ -45,13 +45,13 @@ def build_model_inputs(
             final_tickers).
 
     """
-    ewma = EWMAReturn(data_fetcher=data_fetcher, config=config)
+    ewma = EWMA(data_fetcher=data_fetcher, config=config)
 
-    bl_ewma = BlackLittermanReturn(
+    bl_ewma = BlackLitterman(
         view_vector=ewma.get_returns(), config=config, data_fetcher=data_fetcher
     )
 
-    bl_model = BlackLittermanReturn(
+    bl_model = BlackLitterman(
         view_vector=dcf_views,
         config=config,
         data_fetcher=data_fetcher,
@@ -126,7 +126,7 @@ def prepare_model_inputs(config: AppConfig, data_fetcher: DataFetcher) -> ModelI
     final_tickers = close_df.columns.tolist()
     logger.info("Proceeding with %d tickers that have valid price data.", len(final_tickers))
 
-    capm_return_estimator = CAPMReturnEstimator(
+    capm_return_estimator = CAPM(
         config=config,
         data_fetcher=data_fetcher,
     )

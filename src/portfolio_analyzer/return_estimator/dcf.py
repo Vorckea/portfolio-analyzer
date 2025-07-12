@@ -8,7 +8,7 @@ from portfolio_analyzer.data.data_fetcher import DataFetcher
 from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
 
 
-class DCFReturnEstimator(ReturnEstimator):
+class DCF(ReturnEstimator):
     def __init__(
         self,
         tickers: list[str],

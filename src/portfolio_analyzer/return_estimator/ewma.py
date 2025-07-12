@@ -7,7 +7,7 @@ from ..data.data_fetcher import DataFetcher
 from ..utils.util import calculate_log_returns
 
 
-class EWMAReturn(ReturnEstimator):
+class EWMA(ReturnEstimator):
     """Exponential Weighted Moving Average (EWMA) Return Estimator with optional shrinkage."""
 
     def __init__(

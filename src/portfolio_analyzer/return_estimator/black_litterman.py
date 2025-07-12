@@ -10,7 +10,7 @@ from ..data.data_fetcher import DataFetcher
 from ..utils.util import calculate_annualized_covariance, calculate_log_returns
 
 
-class BlackLittermanReturn(ReturnEstimator):
+class BlackLitterman(ReturnEstimator):
     def __init__(
         self,
         view_vector: pd.Series,
