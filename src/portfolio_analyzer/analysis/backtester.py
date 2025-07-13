@@ -36,10 +36,10 @@ class Backtester:
         data_fetcher: DataFetcher,
     ):
         """Initialize the Backtester."""
-        self.config = config
+        self.config: AppConfig = config
         self.strategy_name = "Mean-Variance Optimization"
-        self.optimizer_cls = optimizer_cls
-        self.data_fetcher = data_fetcher
+        self.optimizer_cls: PortfolioOptimizer = optimizer_cls
+        self.data_fetcher: DataFetcher = data_fetcher
 
     def _prepare_inputs_for_date(
         self, log_returns_slice: pd.DataFrame
@@ -149,7 +149,9 @@ class Backtester:
                     continue
 
                 # Optimize portfolio
-                optimizer = self.optimizer_cls(mean_returns, cov_matrix, self.config)
+                optimizer: PortfolioOptimizer = self.optimizer_cls(
+                    mean_returns, cov_matrix, self.config
+                )
                 result = optimizer.optimize(lambda_reg=self.config.optimization.lambda_reg)
 
                 if not result or not result.success:
