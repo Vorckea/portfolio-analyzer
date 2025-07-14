@@ -14,17 +14,25 @@ class BlackLitterman(ReturnEstimator):
     def __init__(
         self,
         view_vector: pd.Series,
+        start_date: str,
+        end_date: str,
+        tickers: str,
         assets_in_view: Optional[pd.DataFrame] = None,
         view_confidence: Optional[pd.DataFrame] = None,
         config: AppConfig = None,
         data_fetcher: DataFetcher = None,
     ):
         # Align tickers and ensure consistent ordering
+        self.tickers = tickers
+        self.start_date = start_date
+        self.end_date = end_date
         self.config = config or AppConfig.get_instance()
         self.data_fetcher = data_fetcher
         self.log_returns = calculate_log_returns(
-            data_fetcher.fetch_price_data(
-                config.tickers, config.date_range.start, config.date_range.end
+            close_df=data_fetcher.fetch_price_data(
+                tickers=self.tickers,
+                start_date=self.start_date,
+                end_date=self.end_date,
             )
         )
         market_cap_weights = self._calculate_market_cap_weights(self.log_returns)

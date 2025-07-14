@@ -12,6 +12,9 @@ class EWMA(ReturnEstimator):
 
     def __init__(
         self,
+        start_date: str,
+        end_date: str,
+        tickers: str,
         data_fetcher: DataFetcher,
         config: AppConfig = None,
     ):
@@ -26,10 +29,15 @@ class EWMA(ReturnEstimator):
 
         """
         self.config = config if config else AppConfig.get_instance()
+        self.tickers = tickers
+        self.start_date = start_date
+        self.end_date = end_date
         self.data_fetcher = data_fetcher
         self.log_returns = calculate_log_returns(
             data_fetcher.fetch_price_data(
-                config.tickers, config.date_range.start, config.date_range.end
+                tickers=self.tickers,
+                start_date=self.start_date,
+                end_date=self.end_date,
             )
         )
         self.span = config.ewma_span
