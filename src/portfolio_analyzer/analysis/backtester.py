@@ -21,6 +21,8 @@ from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.core.optimizer import PortfolioOptimizer
 from portfolio_analyzer.data.data_fetcher import DataFetcher
 
+from ..data import new_input_preparator as newip
+from ..return_estimator import EWMA
 from ..utils.util import calculate_log_returns
 
 logger = logging.getLogger(__name__)
@@ -52,17 +54,28 @@ class Backtester:
         if log_returns_slice.empty:
             return pd.Series(dtype=float), pd.DataFrame()
 
-        # The original implementation uses EWMA and shrinkage. We use a simple
-        # calculation here to illustrate the pattern of operating on a data slice.
-        trading_days = self.config.trading_days_per_year
-        mean_returns = log_returns_slice.mean() * trading_days
-        cov_matrix = log_returns_slice.cov() * trading_days
+        start_date = log_returns_slice.index.min().strftime("%Y-%m-%d")
+        end_date = log_returns_slice.index.max().strftime("%Y-%m-%d")
+        tickers = log_returns_slice.columns.tolist()
 
-        # NOTE: To fully replicate the original, you would apply EWMA,
-        # Ledoit-Wolf shrinkage, and Black-Litterman logic here.
-        # This refactoring focuses on the data handling efficiency.
+        ewma_returns = EWMA(
+            start_date=start_date,
+            end_date=end_date,
+            tickers=tickers,
+            data_fetcher=self.data_fetcher,
+            config=self.config,
+        )
 
-        return mean_returns, cov_matrix
+        model_inputs = newip.prepare_model_inputs(
+            config=self.config,
+            returns=ewma_returns,
+            data_fetcher=self.data_fetcher,
+            start_date=start_date,
+            end_date=end_date,
+            tickers=tickers,
+        )
+
+        return model_inputs.mean_returns, model_inputs.cov_matrix
 
     def run(self, benchmark_ticker: Optional[str] = None) -> Tuple[pd.DataFrame, dict]:
         """Run the backtest from the configured start to end date.
