@@ -7,6 +7,7 @@ final inputs (mean returns, covariance) for the optimizer.
 """
 
 import logging
+from typing import List
 
 from ..config.config import AppConfig
 from ..data.data_fetcher import DataFetcher
@@ -18,20 +19,25 @@ logger = logging.getLogger(__name__)
 
 
 def prepare_model_inputs(
-    config: AppConfig, returns: ReturnEstimator, data_fetcher: DataFetcher
+    config: AppConfig,
+    returns: ReturnEstimator,
+    data_fetcher: DataFetcher,
+    start_date: str,
+    end_date: str,
+    tickers: List[str],
 ) -> ModelInputs:
     logger.info(
         "--- Starting Data Pipeline for %d tickers from %s to %s ---",
-        len(config.tickers),
-        config.date_range.start.strftime("%Y-%m-%d"),
-        config.date_range.end.strftime("%Y-%m-%d"),
+        len(tickers),
+        start_date,
+        end_date,
     )
 
     mean_returns = returns.get_returns()
     price_df = data_fetcher.fetch_price_data(
-        tickers=config.tickers,
-        start_date=config.date_range.start,
-        end_date=config.date_range.end,
+        tickers=tickers,
+        start_date=start_date,
+        end_date=end_date,
     )
     log_returns = calculate_log_returns(price_df)
     cov_matrix = calculate_annualized_covariance(
