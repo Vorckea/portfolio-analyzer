@@ -54,8 +54,8 @@ def sharpe_ratio(
         float: The portfolio's Sharpe ratio.
 
     """
-    p_return = portfolio_return(weights, mean_returns)
-    p_vol = portfolio_volatility(weights, cov_matrix)
+    p_return = portfolio_return(weights=weights, mean_returns=mean_returns)
+    p_vol = portfolio_volatility(weights=weights, cov_matrix=cov_matrix)
     risk_free_rate_log = np.log(1 + risk_free_rate)
 
     if p_vol == 0:
@@ -88,6 +88,11 @@ def negative_sharpe_ratio(
     """
     # The negative of the Sharpe ratio is minimized
     # We add a regularization term to the volatility
-    s_ratio = sharpe_ratio(weights, mean_returns, cov_matrix, risk_free_rate)
+    s_ratio = sharpe_ratio(
+        weights=weights,
+        mean_returns=mean_returns,
+        cov_matrix=cov_matrix,
+        risk_free_rate=risk_free_rate,
+    )
     l2_penalty = lambda_reg * np.sum(weights**2)
     return -s_ratio + l2_penalty
