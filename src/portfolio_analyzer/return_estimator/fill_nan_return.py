@@ -1,6 +1,6 @@
 import pandas as pd
 
-from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
+from .interface import ReturnEstimator
 
 
 class FillNaNReturn(ReturnEstimator):

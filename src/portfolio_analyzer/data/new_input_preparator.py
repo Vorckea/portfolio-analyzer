@@ -10,9 +10,9 @@ import logging
 from typing import List
 
 from ..config.config import AppConfig
-from ..data.data_fetcher import DataFetcher
 from ..data.models import ModelInputs
-from ..return_estimator.return_estimator import ReturnEstimator
+from ..data.repository import Repository
+from ..return_estimator.interface import ReturnEstimator
 from ..utils.util import calculate_annualized_covariance, calculate_log_returns
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def prepare_model_inputs(
     config: AppConfig,
     returns: ReturnEstimator,
-    data_fetcher: DataFetcher,
+    repository: Repository,
     start_date: str,
     end_date: str,
     tickers: List[str],
@@ -34,7 +34,7 @@ def prepare_model_inputs(
     )
 
     mean_returns = returns.get_returns()
-    price_df = data_fetcher.fetch_price_data(
+    price_df = repository.fetch_price_data(
         tickers=tickers,
         start_date=start_date,
         end_date=end_date,

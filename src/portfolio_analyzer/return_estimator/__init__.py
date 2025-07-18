@@ -23,7 +23,7 @@ from .constant_return import ConstantReturn
 from .dcf import DCF
 from .ewma import EWMA
 from .fill_nan_return import FillNaNReturn
-from .return_estimator import ReturnEstimator
+from .interface import ReturnEstimator
 
 __all__ = [
     "BlackLitterman",

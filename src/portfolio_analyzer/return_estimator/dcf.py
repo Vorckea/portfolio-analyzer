@@ -4,8 +4,9 @@ import numpy as np
 import pandas as pd
 
 from portfolio_analyzer.config.config import AppConfig
-from portfolio_analyzer.data.data_fetcher import DataFetcher
-from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
+from portfolio_analyzer.data.repository import Repository
+
+from .interface import ReturnEstimator
 
 
 class DCF(ReturnEstimator):
@@ -13,21 +14,21 @@ class DCF(ReturnEstimator):
         self,
         tickers: list[str],
         risk_free_rate: float,
-        data_fetcher: DataFetcher,  # Injected
+        repository: Repository,  # Injected
         config: AppConfig,  # Injected
         logger: logging.Logger = None,  # Injected
     ):
         self.tickers = tickers
         self.risk_free_rate = risk_free_rate
-        self.data_fetcher = data_fetcher
+        self.repository = repository
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
         self.dcf_returns = self.get_dcf_returns()
 
     def _fetch_data(self, ticker):
         try:
-            info = self.data_fetcher.fetch_ticker_info(ticker)
-            cashflow_df = self.data_fetcher.fetch_cashflow(ticker)
+            info = self.repository.fetch_ticker_info(ticker)
+            cashflow_df = self.repository.fetch_cashflow(ticker)
             data = {}
 
             def skip(reason):

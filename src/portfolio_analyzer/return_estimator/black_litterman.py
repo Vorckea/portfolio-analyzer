@@ -3,11 +3,10 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from portfolio_analyzer.config.config import AppConfig
-from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
-
-from ..data.data_fetcher import DataFetcher
+from ..config.config import AppConfig
+from ..data.repository import Repository
 from ..utils.util import calculate_annualized_covariance, calculate_log_returns
+from .interface import ReturnEstimator
 
 
 class BlackLitterman(ReturnEstimator):
@@ -20,16 +19,16 @@ class BlackLitterman(ReturnEstimator):
         assets_in_view: Optional[pd.DataFrame] = None,
         view_confidence: Optional[pd.DataFrame] = None,
         config: AppConfig = None,
-        data_fetcher: DataFetcher = None,
+        repository: Repository = None,
     ):
         # Align tickers and ensure consistent ordering
         self.tickers = tickers
         self.start_date = start_date
         self.end_date = end_date
         self.config = config or AppConfig.get_instance()
-        self.data_fetcher = data_fetcher
+        self.repository = repository
         self.log_returns = calculate_log_returns(
-            close_df=data_fetcher.fetch_price_data(
+            close_df=repository.fetch_price_data(
                 tickers=self.tickers,
                 start_date=self.start_date,
                 end_date=self.end_date,
@@ -65,7 +64,7 @@ class BlackLitterman(ReturnEstimator):
 
     def _calculate_market_cap_weights(self, log_returns: pd.DataFrame) -> pd.Series:
         tickers = log_returns.columns.tolist()
-        market_cap = self.data_fetcher.fetch_market_caps(tickers)
+        market_cap = self.repository.fetch_market_caps(tickers)
         if market_cap is None or market_cap.empty:
             raise ValueError("Market cap weights cannot be None or empty.")
         market_cap_weights = market_cap / market_cap.sum()

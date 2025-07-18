@@ -1,7 +1,7 @@
 import pandas as pd
 
 from ..config.config import AppConfig
-from .return_estimator import ReturnEstimator
+from .interface import ReturnEstimator
 
 
 class ConstantReturn(ReturnEstimator):

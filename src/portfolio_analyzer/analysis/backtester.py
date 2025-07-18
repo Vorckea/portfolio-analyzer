@@ -19,7 +19,7 @@ from portfolio_analyzer.analysis.metrics import (
 )
 from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.core.optimizer import PortfolioOptimizer
-from portfolio_analyzer.data.data_fetcher import DataFetcher
+from portfolio_analyzer.data.repository import Repository
 
 from ..data import new_input_preparator as newip
 from ..return_estimator import EWMA
@@ -35,13 +35,13 @@ class Backtester:
         self,
         config: AppConfig,
         optimizer_cls: PortfolioOptimizer,
-        data_fetcher: DataFetcher,
+        repository: Repository,
     ):
         """Initialize the Backtester."""
         self.config: AppConfig = config
         self.strategy_name = "Mean-Variance Optimization"
         self.optimizer_cls: PortfolioOptimizer = optimizer_cls
-        self.data_fetcher: DataFetcher = data_fetcher
+        self.repository: Repository = repository
 
     def _prepare_inputs_for_date(
         self, log_returns_slice: pd.DataFrame
@@ -62,14 +62,14 @@ class Backtester:
             start_date=start_date,
             end_date=end_date,
             tickers=tickers,
-            data_fetcher=self.data_fetcher,
+            repository=self.repository,
             config=self.config,
         )
 
         model_inputs = newip.prepare_model_inputs(
             config=self.config,
             returns=ewma_returns,
-            data_fetcher=self.data_fetcher,
+            repository=self.repository,
             start_date=start_date,
             end_date=end_date,
             tickers=tickers,
@@ -111,7 +111,7 @@ class Backtester:
             all_tickers.append(benchmark_ticker)
 
         # 2. Fetch all price data for the entire period ONCE
-        full_price_data = self.data_fetcher.fetch_price_data(
+        full_price_data = self.repository.fetch_price_data(
             all_tickers,
             full_start_date.strftime("%Y-%m-%d"),
             full_end_date.strftime("%Y-%m-%d"),

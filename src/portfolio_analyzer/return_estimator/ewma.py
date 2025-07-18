@@ -1,10 +1,9 @@
 import pandas as pd
 
-from portfolio_analyzer.return_estimator.return_estimator import ReturnEstimator
-
 from ..config.config import AppConfig
-from ..data.data_fetcher import DataFetcher
+from ..data.repository import Repository
 from ..utils.util import calculate_log_returns
+from .interface import ReturnEstimator
 
 
 class EWMA(ReturnEstimator):
@@ -15,7 +14,7 @@ class EWMA(ReturnEstimator):
         start_date: str,
         end_date: str,
         tickers: str,
-        data_fetcher: DataFetcher,
+        repository: Repository,
         config: AppConfig = None,
     ):
         """Exponential Weighted Moving Average (EWMA) Return Estimator with optional shrinkage.
@@ -32,9 +31,9 @@ class EWMA(ReturnEstimator):
         self.tickers = tickers
         self.start_date = start_date
         self.end_date = end_date
-        self.data_fetcher = data_fetcher
+        self.repository = repository
         self.log_returns = calculate_log_returns(
-            data_fetcher.fetch_price_data(
+            repository.fetch_price_data(
                 tickers=self.tickers,
                 start_date=self.start_date,
                 end_date=self.end_date,
