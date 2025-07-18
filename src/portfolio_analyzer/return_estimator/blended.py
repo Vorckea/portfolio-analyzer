@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .interface import ReturnEstimator
+from .base import ReturnEstimator
 
 
 class BlendedReturn(ReturnEstimator):

@@ -3,7 +3,7 @@ import pandas as pd
 from ..config.config import AppConfig
 from ..data.repository import Repository
 from ..utils.util import calculate_log_returns
-from .interface import ReturnEstimator
+from .base import ReturnEstimator
 
 
 class EWMA(ReturnEstimator):

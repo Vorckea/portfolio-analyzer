@@ -12,7 +12,7 @@ from typing import List
 from ..config.config import AppConfig
 from ..data.models import ModelInputs
 from ..data.repository import Repository
-from ..return_estimator.interface import ReturnEstimator
+from ..return_estimator.base import ReturnEstimator
 from ..utils.util import calculate_annualized_covariance, calculate_log_returns
 
 logger = logging.getLogger(__name__)

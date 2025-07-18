@@ -6,7 +6,7 @@ import pandas as pd
 from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.data.repository import Repository
 
-from .interface import ReturnEstimator
+from .base import ReturnEstimator
 
 
 class DCF(ReturnEstimator):

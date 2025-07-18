@@ -16,14 +16,14 @@ Available estimators:
     - ReturnEstimator: Abstract base class for all return estimators.
 """
 
+from .base import ReturnEstimator
 from .black_litterman import BlackLitterman
-from .blended_return import BlendedReturn
+from .blended import BlendedReturn
 from .capm import CAPM
 from .constant_return import ConstantReturn
 from .dcf import DCF
 from .ewma import EWMA
-from .fill_nan_return import FillNaNReturn
-from .interface import ReturnEstimator
+from .nan_filler import FillNaNReturn
 
 __all__ = [
     "BlackLitterman",
