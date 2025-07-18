@@ -33,14 +33,12 @@ class CAPM(ReturnEstimator):
         self._returns = None
 
     def _calculate_capm_returns(self) -> pd.Series:
-        market_ticker = MARKET_TICKER
-
-        market_info = self.repository.fetch_ticker_info(market_ticker)
+        market_info = self.repository.fetch_ticker_info(MARKET_TICKER)
         er_market = market_info.get("expectedReturn")
 
         if er_market is None:
             price_data = self.repository.fetch_price_data(
-                [market_ticker],
+                [MARKET_TICKER],
                 self.start_date,
                 self.end_date,
             )

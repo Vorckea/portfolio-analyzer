@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 
@@ -17,7 +17,7 @@ class EWMA(ReturnEstimator):
         end_date: str,
         tickers: List[str],
         repository: Repository,
-        config: AppConfig = None,
+        config: Optional[AppConfig] = None,
     ):
         """Exponential Weighted Moving Average (EWMA) Return Estimator with optional shrinkage.
 
@@ -45,8 +45,8 @@ class EWMA(ReturnEstimator):
         self.trading_days = config.trading_days_per_year
         self.shrinkage_factor = config.mean_shrinkage_alpha
 
-        self.ewma_returns = self._calculate_ewma_returns()
-        self.shrinked_ewma_returns = self._apply_shrinkage()
+        self.ewma_returns = None
+        self.shrinked_ewma_returns = None
 
     def _calculate_ewma_returns(self) -> pd.Series:
         """Calculate annualized EWMA returns for each asset.
@@ -67,9 +67,11 @@ class EWMA(ReturnEstimator):
 
         """
         if self.shrinkage_factor <= 0:
-            return self.ewma_returns
-        grand_mean = self.ewma_returns.mean()
-        return (1 - self.shrinkage_factor) * self.ewma_returns + self.shrinkage_factor * grand_mean
+            return self.get_ewma_returns()
+        grand_mean = self.get_ewma_returns().mean()
+        return (
+            1 - self.shrinkage_factor
+        ) * self.get_ewma_returns() + self.shrinkage_factor * grand_mean
 
     def get_ewma_returns(self) -> pd.Series:
         """Get the annualized EWMA returns.
@@ -78,6 +80,8 @@ class EWMA(ReturnEstimator):
             pd.Series: Annualized EWMA returns
 
         """
+        if self.ewma_returns is None:
+            self.ewma_returns = self._calculate_ewma_returns()
         return self.ewma_returns
 
     def get_shrinked_ewma_returns(self) -> pd.Series:
@@ -87,6 +91,8 @@ class EWMA(ReturnEstimator):
             pd.Series: Shrinked EWMA returns
 
         """
+        if self.shrinked_ewma_returns is None:
+            self.shrinked_ewma_returns = self._apply_shrinkage()
         return self.shrinked_ewma_returns
 
     def get_returns(self) -> pd.Series:

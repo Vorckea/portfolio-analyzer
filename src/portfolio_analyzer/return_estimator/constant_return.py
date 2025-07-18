@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from ..config.config import AppConfig
@@ -13,8 +14,14 @@ class ConstantReturn(ReturnEstimator):
 
     def get_returns(self) -> pd.Series:
         """Returns a Series with the constant return value."""
+        if self.config.tickers is None or len(self.config.tickers) == 0:
+            raise ValueError("No tickers provided in the configuration.")
+
         return pd.Series(
-            [self.constant_return] * len(self.config.tickers),
+            data=np.full(
+                shape=len(self.config.tickers),
+                fill_value=self.constant_return,
+            ),
             index=self.config.tickers,
             name="Constant Return",
         )
