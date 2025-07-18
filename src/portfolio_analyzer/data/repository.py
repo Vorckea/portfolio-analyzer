@@ -25,10 +25,14 @@ class Repository:
         self._validate_tickers(tickers)
         cache_key = (tuple(sorted(tickers)), start_date, end_date)
         if cache_key in self._price_cache:
-            self.logger.info(f"Cache hit for price data: {cache_key}")
+            self.logger.debug(f"Cache hit for price data: {cache_key}")
             return self._price_cache[cache_key].copy()
-        self.logger.info(f"Cache miss for price data: {cache_key}. Fetching from data source.")
-        data = self.data_fetcher.fetch_price_data(tickers, start_date, end_date)
+        self.logger.debug(f"Cache miss for price data: {cache_key}. Fetching from data source.")
+        data = self.data_fetcher.fetch_price_data(
+            tickers=tickers,
+            start_date=start_date,
+            end_date=end_date,
+        )
         if not data.empty and not data.isnull().all().all():
             self._price_cache[cache_key] = data.copy()
             return data
@@ -39,9 +43,9 @@ class Repository:
         self._validate_tickers(tickers)
         cache_key = tuple(sorted(tickers))
         if cache_key in self._market_cap_cache:
-            self.logger.info(f"Cache hit for market caps: {cache_key}")
+            self.logger.debug(f"Cache hit for market caps: {cache_key}")
             return self._market_cap_cache[cache_key].copy()
-        self.logger.info(f"Cache miss for market caps: {cache_key}. Fetching from data source.")
+        self.logger.debug(f"Cache miss for market caps: {cache_key}. Fetching from data source.")
         data = self.data_fetcher.fetch_market_caps(tickers)
         if not data.empty and not data.isnull().all():
             self._market_cap_cache[cache_key] = data.copy()
@@ -54,9 +58,9 @@ class Repository:
     def fetch_ticker_info(self, ticker: str) -> Dict[str, Any]:
         self._validate_ticker(ticker)
         if ticker in self._ticker_info_cache:
-            self.logger.info(f"Cache hit for ticker info: {ticker}")
+            self.logger.debug(f"Cache hit for ticker info: {ticker}")
             return self._ticker_info_cache[ticker].copy()
-        self.logger.info(f"Cache miss for ticker info: {ticker}. Fetching from data source.")
+        self.logger.debug(f"Cache miss for ticker info: {ticker}. Fetching from data source.")
         data = self.data_fetcher.fetch_ticker_info(ticker)
         if data:
             self._ticker_info_cache[ticker] = data.copy()
@@ -67,9 +71,9 @@ class Repository:
     def fetch_cashflow(self, ticker: str) -> Optional[pd.DataFrame]:
         self._validate_ticker(ticker)
         if ticker in self._cashflow_cache:
-            self.logger.info(f"Cache hit for cashflow: {ticker}")
+            self.logger.debug(f"Cache hit for cashflow: {ticker}")
             return self._cashflow_cache[ticker].copy()
-        self.logger.info(f"Cache miss for cashflow: {ticker}. Fetching from data source.")
+        self.logger.debug(f"Cache miss for cashflow: {ticker}. Fetching from data source.")
         data = self.data_fetcher.fetch_cashflow(ticker)
         if data is not None and not data.empty and not data.isnull().all().all():
             self._cashflow_cache[ticker] = data.copy()
