@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -16,16 +16,17 @@ class Repository:
     def __init__(self, data_fetcher: DataFetcher, logger: Optional[logging.Logger] = None):
         self.data_fetcher = data_fetcher
         self.logger = logger or logging.getLogger(__name__)
-        self._price_cache: Dict[str, pd.DataFrame] = {}
-        self._market_cap_cache: Dict[str, pd.Series] = {}
+        self._price_cache: Dict[Tuple[Tuple[str, ...], str, str], pd.DataFrame] = {}
+        self._market_cap_cache: Dict[Tuple[str, ...], pd.Series] = {}
         self._ticker_info_cache: Dict[str, Dict] = {}
         self._cashflow_cache: Dict[str, pd.DataFrame] = {}
 
     def fetch_price_data(self, tickers: List[str], start_date: str, end_date: str) -> pd.DataFrame:
-        cache_key = f"{','.join(sorted(tickers))}:{start_date}:{end_date}"
+        self._validate_tickers(tickers)
+        cache_key = (tuple(sorted(tickers)), start_date, end_date)
         if cache_key in self._price_cache:
             self.logger.info(f"Cache hit for price data: {cache_key}")
-            return self._price_cache[cache_key]
+            return self._price_cache[cache_key].copy()
         self.logger.info(f"Cache miss for price data: {cache_key}. Fetching from data source.")
         data = self.data_fetcher.fetch_price_data(tickers, start_date, end_date)
         if not data.empty and not data.isnull().all().all():
@@ -35,10 +36,11 @@ class Repository:
         return data
 
     def fetch_market_caps(self, tickers: List[str]) -> pd.Series:
-        cache_key = ",".join(sorted(tickers))
+        self._validate_tickers(tickers)
+        cache_key = tuple(sorted(tickers))
         if cache_key in self._market_cap_cache:
             self.logger.info(f"Cache hit for market caps: {cache_key}")
-            return self._market_cap_cache[cache_key]
+            return self._market_cap_cache[cache_key].copy()
         self.logger.info(f"Cache miss for market caps: {cache_key}. Fetching from data source.")
         data = self.data_fetcher.fetch_market_caps(tickers)
         if not data.empty and not data.isnull().all():
@@ -49,10 +51,11 @@ class Repository:
         )
         return data
 
-    def fetch_ticker_info(self, ticker: str) -> Dict:
+    def fetch_ticker_info(self, ticker: str) -> Dict[str, Any]:
+        self._validate_ticker(ticker)
         if ticker in self._ticker_info_cache:
             self.logger.info(f"Cache hit for ticker info: {ticker}")
-            return self._ticker_info_cache[ticker]
+            return self._ticker_info_cache[ticker].copy()
         self.logger.info(f"Cache miss for ticker info: {ticker}. Fetching from data source.")
         data = self.data_fetcher.fetch_ticker_info(ticker)
         if data:
@@ -62,9 +65,10 @@ class Repository:
         return data
 
     def fetch_cashflow(self, ticker: str) -> Optional[pd.DataFrame]:
+        self._validate_ticker(ticker)
         if ticker in self._cashflow_cache:
             self.logger.info(f"Cache hit for cashflow: {ticker}")
-            return self._cashflow_cache[ticker]
+            return self._cashflow_cache[ticker].copy()
         self.logger.info(f"Cache miss for cashflow: {ticker}. Fetching from data source.")
         data = self.data_fetcher.fetch_cashflow(ticker)
         if data is not None and not data.empty and not data.isnull().all().all():
@@ -72,3 +76,15 @@ class Repository:
             return data
         self.logger.warning(f"Fetched cashflow data is empty or contains only NaNs for: {ticker}")
         return data
+
+    def _validate_tickers(self, tickers: List[str]) -> None:
+        """Validate that tickers are provided and not empty."""
+        if not tickers or any(not ticker for ticker in tickers):
+            self.logger.error("No valid tickers provided.")
+            raise ValueError("No valid tickers provided.")
+
+    def _validate_ticker(self, ticker: str) -> None:
+        """Validate that a single ticker is provided and not empty."""
+        if not ticker:
+            self.logger.error("No valid ticker provided.")
+            raise ValueError("No valid ticker provided.")

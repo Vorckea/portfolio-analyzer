@@ -50,6 +50,10 @@ class DataFetcher:
             dates as index.
 
         """
+        if tickers is None or not tickers:
+            self._log_error("No tickers provided for fetching price data.")
+            raise ValueError("No tickers provided for fetching price data.")
+
         self._log_info(f"Fetching historical price data for {len(tickers)} tickers...")
         data: pd.DataFrame = self.provider.download(
             tickers, start=start_date, end=end_date, progress=False, auto_adjust=True

@@ -26,6 +26,10 @@ def prepare_model_inputs(
     end_date: str,
     tickers: List[str],
 ) -> ModelInputs:
+    if tickers is None or not tickers:
+        logger.error("No tickers provided for preparing model inputs.")
+        raise ValueError("No tickers provided for preparing model inputs.")
+
     logger.info(
         "--- Starting Data Pipeline for %d tickers from %s to %s ---",
         len(tickers),
