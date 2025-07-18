@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import List, Optional
 
 import pandas as pd
 
@@ -16,7 +16,7 @@ class CAPM(ReturnEstimator):
         self,
         start_date: str,
         end_date: str,
-        tickers: str,
+        tickers: List[str],
         config: AppConfig,
         repository: Repository,
         logger: Optional[logging.Logger] = None,

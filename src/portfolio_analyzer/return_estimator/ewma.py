@@ -1,3 +1,5 @@
+from typing import List
+
 import pandas as pd
 
 from ..config.config import AppConfig
@@ -13,7 +15,7 @@ class EWMA(ReturnEstimator):
         self,
         start_date: str,
         end_date: str,
-        tickers: str,
+        tickers: List[str],
         repository: Repository,
         config: AppConfig = None,
     ):

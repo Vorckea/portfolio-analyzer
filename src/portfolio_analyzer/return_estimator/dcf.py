@@ -1,18 +1,18 @@
 import logging
+from typing import List
 
 import numpy as np
 import pandas as pd
 
-from portfolio_analyzer.config.config import AppConfig
-from portfolio_analyzer.data.repository import Repository
-
+from ..config.config import AppConfig
+from ..data.repository import Repository
 from .base import ReturnEstimator
 
 
 class DCF(ReturnEstimator):
     def __init__(
         self,
-        tickers: list[str],
+        tickers: List[str],
         risk_free_rate: float,
         repository: Repository,  # Injected
         config: AppConfig,  # Injected
