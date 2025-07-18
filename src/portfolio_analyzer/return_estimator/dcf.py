@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ class DCF(ReturnEstimator):
         risk_free_rate: float,
         repository: Repository,  # Injected
         config: AppConfig,  # Injected
-        logger: logging.Logger = None,  # Injected
+        logger: Optional[logging.Logger] = None,  # Injected
     ):
         self.tickers = tickers
         self.risk_free_rate = risk_free_rate
