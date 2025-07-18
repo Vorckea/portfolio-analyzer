@@ -1,4 +1,5 @@
-from typing import List, Tuple
+from collections.abc import Sequence
+from typing import Tuple
 
 import pandas as pd
 
@@ -14,9 +15,14 @@ class BlendedReturn(ReturnEstimator):
 
     """
 
-    def __init__(self, weighted_estimators: List[Tuple[ReturnEstimator, float]]):
+    def __init__(self, weighted_estimators: Sequence[Tuple[ReturnEstimator, float]]):
         if not weighted_estimators:
             raise ValueError("At least one estimator must be provided.")
+
+        for _, weight in weighted_estimators:
+            if weight < 0:
+                raise ValueError("Weights must be positive or zero.")
+
         self.weighted_estimators = weighted_estimators
         self._returns = None
 
@@ -27,14 +33,19 @@ class BlendedReturn(ReturnEstimator):
             pd.Series: Blended returns series.
 
         """
-        all_tickers = set()
-        for est, _ in self.weighted_estimators:
-            all_tickers.update(est.get_returns().index)
-        total_weight = sum(weight for _, weight in self.weighted_estimators)
+        returns_list = []
+        weights = []
+        for est, weight in self.weighted_estimators:
+            returns = est.get_returns()
+            returns_list.append(returns * weight)
+            weights.append(weight)
+
+        # Concatenate all weighted returns into a DataFrame, aligning on index
+        blended_df = pd.concat(returns_list, axis=1).fillna(0)
+        blended = blended_df.sum(axis=1)
+        total_weight = sum(weights)
         if total_weight == 0:
             raise ValueError("Total weight for blended returns cannot be zero.")
-        blended = sum(est.get_returns() * weight for est, weight in self.weighted_estimators)
-        blended = blended.reindex(all_tickers).fillna(0)
         return blended / total_weight
 
     def get_returns(self) -> pd.Series:

@@ -23,7 +23,7 @@ class DCF(ReturnEstimator):
         self.repository = repository
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
-        self.dcf_returns = self.get_dcf_returns()
+        self.dcf_returns = None
 
     def _fetch_data(self, ticker):
         try:
@@ -116,7 +116,6 @@ class DCF(ReturnEstimator):
         wacc = self._calculate_wacc(data)
         pv_fcf_list = []
         last_fcf = data["fcf"]
-        print(last_fcf)
         current_year = 0
         stage1_growth_rate = self._get_adaptive_growth_rate(data)
 
@@ -166,4 +165,6 @@ class DCF(ReturnEstimator):
         return pd.Series(results, dtype=float).fillna(0.0)
 
     def get_returns(self) -> pd.Series:
+        if self.dcf_returns is None:
+            self.dcf_returns = self.get_dcf_returns()
         return self.dcf_returns

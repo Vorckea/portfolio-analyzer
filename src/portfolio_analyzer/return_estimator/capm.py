@@ -8,6 +8,8 @@ from ..data.repository import Repository
 from ..utils.util import calculate_log_returns
 from .base import ReturnEstimator
 
+MARKET_TICKER = "OSEBX.OL"
+
 
 class CAPM(ReturnEstimator):
     # ER_i = R_f + B_i * (ER_m - R_f)
@@ -28,10 +30,10 @@ class CAPM(ReturnEstimator):
         self.tickers = tickers
         self.start_date = start_date
         self.end_date = end_date
-        self._returns = self._calculate_capm_returns()
+        self._returns = None
 
     def _calculate_capm_returns(self) -> pd.Series:
-        market_ticker = "OSEBX.OL"
+        market_ticker = MARKET_TICKER
 
         market_info = self.repository.fetch_ticker_info(market_ticker)
         er_market = market_info.get("expectedReturn")
@@ -49,7 +51,7 @@ class CAPM(ReturnEstimator):
 
         for ticker in self.tickers:
             info = self.repository.fetch_ticker_info(ticker)
-            beta = info.get("beta")
+            beta: Optional[float] = info.get("beta")
             if beta is None:
                 returns[ticker] = 0
                 continue
@@ -60,4 +62,6 @@ class CAPM(ReturnEstimator):
         return pd.Series(returns)
 
     def get_returns(self) -> pd.Series:
+        if self._returns is None:
+            self._returns = self._calculate_capm_returns()
         return self._returns
