@@ -44,8 +44,8 @@ class Repository:
         self.logger.info(f"Cache miss for market caps: {cache_key}. Fetching from data source.")
         data = self.data_fetcher.fetch_market_caps(tickers)
         if not data.empty and not data.isnull().all():
-            self._market_cap_cache[cache_key] = data
-            return data
+            self._market_cap_cache[cache_key] = data.copy()
+            return data.copy()
         self.logger.warning(
             f"Fetched market cap data is empty or contains only NaNs for: {cache_key}"
         )
@@ -59,8 +59,8 @@ class Repository:
         self.logger.info(f"Cache miss for ticker info: {ticker}. Fetching from data source.")
         data = self.data_fetcher.fetch_ticker_info(ticker)
         if data:
-            self._ticker_info_cache[ticker] = data
-            return data
+            self._ticker_info_cache[ticker] = data.copy()
+            return data.copy()
         self.logger.warning(f"Fetched ticker info is empty for: {ticker}")
         return data
 
@@ -72,8 +72,8 @@ class Repository:
         self.logger.info(f"Cache miss for cashflow: {ticker}. Fetching from data source.")
         data = self.data_fetcher.fetch_cashflow(ticker)
         if data is not None and not data.empty and not data.isnull().all().all():
-            self._cashflow_cache[ticker] = data
-            return data
+            self._cashflow_cache[ticker] = data.copy()
+            return data.copy()
         self.logger.warning(f"Fetched cashflow data is empty or contains only NaNs for: {ticker}")
         return data
 
