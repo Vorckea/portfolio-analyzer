@@ -45,15 +45,8 @@ class DCF(ReturnEstimator):
             data["current_price"] = info.get("currentPrice")
             data["analyst_growth_estimate"] = info.get("earningsGrowth")
 
-            if any(
-                v is None
-                for v in [
-                    data["beta"],
-                    data["mkt_cap"],
-                    data["shares_outstanding"],
-                    data["current_price"],
-                ]
-            ):
+            required_fields = ["beta", "mkt_cap", "shares_outstanding", "current_price"]
+            if any(data[field] is None for field in required_fields):
                 return skip("Missing essential data (beta, mkt_cap, etc.)")
             if data["mkt_cap"] <= 0:
                 return skip("Invalid market cap")

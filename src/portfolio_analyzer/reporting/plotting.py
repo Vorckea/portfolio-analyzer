@@ -150,8 +150,10 @@ def display_optimization_summary(result: PortfolioResult) -> None:
     print("\n--- Optimization Results ---\n")
     print("Optimal Weights:")
     if result.opt_weights is not None and not result.opt_weights.empty:
-        for ticker_item, weight_item in result.opt_weights.sort_values(ascending=False).items():
-            print(f"\t{ticker_item}: {weight_item:.2%}")
+        for i, (ticker_item, weight_item) in enumerate(
+            result.opt_weights.sort_values(ascending=False).items(), 1
+        ):
+            print(f"\t{i}. {ticker_item}: {weight_item:.2%}")
         print(f"\tTotal Sum: {result.opt_weights.sum():.4f}")
     else:
         print("\tNo assets in the final portfolio.")

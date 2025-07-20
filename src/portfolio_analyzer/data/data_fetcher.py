@@ -64,9 +64,12 @@ class DataFetcher:
             )
             raise ValueError("No price data fetched for any tickers.")
 
-        close_df = self._extract_close_prices(data).dropna(axis=1, how="all")
-        self._warn_missing_tickers(tickers, close_df.columns)
-        return close_df.ffill()
+        return (
+            self._extract_close_prices(data)
+            .dropna(axis=1, how="all")
+            .pipe(lambda df: (self._warn_missing_tickers(tickers, df.columns), df)[1])
+            .ffill()
+        )
 
     def fetch_market_caps(self, tickers: List[str]) -> pd.Series:
         """Fetch market capitalization data for the given tickers.
@@ -93,8 +96,7 @@ class DataFetcher:
                 )
                 return 0
 
-        market_caps = {ticker: get_cap(ticker) for ticker in tickers}
-        return pd.Series(market_caps)
+        return pd.Series(map(get_cap, tickers), index=tickers)
 
     def fetch_ticker_info(self, ticker: str) -> Dict:
         """Fetch detailed information for a specific ticker symbol.
