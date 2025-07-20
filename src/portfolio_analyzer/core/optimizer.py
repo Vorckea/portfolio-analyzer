@@ -11,8 +11,7 @@ import pandas as pd
 from scipy.optimize import minimize
 
 from portfolio_analyzer.config.config import AppConfig
-from portfolio_analyzer.core.objectives import (
-    negative_sharpe_ratio,
+from portfolio_analyzer.core.utils import (
     portfolio_return,
     portfolio_volatility,
     sharpe_ratio,
@@ -20,11 +19,19 @@ from portfolio_analyzer.core.objectives import (
 from portfolio_analyzer.data.models import PortfolioResult
 from portfolio_analyzer.utils.exceptions import InputAlignmentError, OptimizationError
 
+from .new_objectives import NegativeSharpeRatio, PortfolioObjective, VolatilityObjective
+
 
 class PortfolioOptimizer:
     """Performs mean-variance portfolio optimization."""
 
-    def __init__(self, mean_returns: pd.Series, cov_matrix: pd.DataFrame, config: AppConfig):
+    def __init__(
+        self,
+        mean_returns: pd.Series,
+        cov_matrix: pd.DataFrame,
+        config: AppConfig,
+        objective: PortfolioObjective,
+    ):
         """Initialize the PortfolioOptimizer.
 
         Aligns tickers between mean_returns and cov_matrix to ensure consistency.
@@ -49,8 +56,9 @@ class PortfolioOptimizer:
         self.cov_matrix = cov_matrix
         self.tickers = list(mean_returns.index)
         self.config = config
+        self.objective = objective
 
-    def optimize(self, lambda_reg: float) -> Optional[PortfolioResult]:
+    def optimize(self) -> Optional[PortfolioResult]:
         """Perform portfolio optimization to find the tangency portfolio.
 
         This method seeks to maximize the Sharpe ratio, potentially with L2
@@ -65,9 +73,9 @@ class PortfolioOptimizer:
                 optimization, or None if it fails.
 
         """
-        return self._perform_core_optimization(lambda_reg)
+        return self._perform_core_optimization()
 
-    def _perform_core_optimization(self, lambda_val: float) -> PortfolioResult:
+    def _perform_core_optimization(self) -> PortfolioResult:
         num_asset = len(self.tickers)
         if num_asset == 0:
             raise OptimizationError("No assets to optimize.")
@@ -77,14 +85,8 @@ class PortfolioOptimizer:
         initial_weights = np.array([1.0 / num_asset] * num_asset)
 
         opt_result = minimize(
-            negative_sharpe_ratio,
+            self.objective,
             initial_weights,
-            args=(
-                self.mean_returns.values,
-                self.cov_matrix.values,
-                self.config.risk_free_rate,
-                lambda_val,
-            ),
             method="SLSQP",
             bounds=bounds,
             constraints=constraints,
@@ -160,9 +162,8 @@ class PortfolioOptimizer:
         # 1. Find Min Volatility portfolio
         min_vol_constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
         min_vol_opt = minimize(
-            portfolio_volatility,
+            VolatilityObjective(self.cov_matrix.values),
             initial_weights,
-            args=(self.cov_matrix.values,),
             method="SLSQP",
             bounds=bounds,
             constraints=min_vol_constraints,
@@ -173,7 +174,19 @@ class PortfolioOptimizer:
 
         # 2. Find the Max Sharpe Ratio portfolio directly using the optimizer
         # We use lambda_reg=0 to find the theoretical max Sharpe on the frontier
-        max_sharpe_result = self.optimize(lambda_reg=0.0)
+        max_sharpe_opt = minimize(
+            NegativeSharpeRatio(
+                self.mean_returns.values,
+                self.cov_matrix.values,
+                self.config.risk_free_rate,
+                0.0,  # No regularization for max Sharpe
+            ),
+            initial_weights,
+            method="SLSQP",
+            bounds=bounds,
+            constraints={"type": "eq", "fun": lambda w: np.sum(w) - 1},
+        )
+        max_sharpe_result = self._create_result_from_weights(max_sharpe_opt.x)
         if not max_sharpe_result or not max_sharpe_result.success:
             raise OptimizationError("Could not find the maximum Sharpe ratio portfolio.")
 
@@ -192,9 +205,8 @@ class PortfolioOptimizer:
                 },
             ]
             opt = minimize(
-                portfolio_volatility,
+                VolatilityObjective(self.cov_matrix.values),
                 initial_weights,
-                args=(self.cov_matrix.values,),
                 method="SLSQP",
                 bounds=bounds,
                 constraints=constraints,

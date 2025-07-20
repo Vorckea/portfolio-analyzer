@@ -167,7 +167,6 @@ def display_optimization_summary(result: PortfolioResult) -> None:
 def plot_optimal_weights(
     result: PortfolioResult,
     max_weight_per_asset: float,
-    lambda_reg: float,
     ax: plt.Axes = None,
 ) -> None:
     """Plot a bar chart of the optimal portfolio weights."""
@@ -204,7 +203,7 @@ def plot_optimal_weights(
         ax=ax,
     )
     ax.set_title(
-        f"Optimal Portfolio Weights (Lambda = {lambda_reg:.2f})",
+        "Optimal Portfolio Weights",
         fontsize=18,
         fontweight="bold",
     )

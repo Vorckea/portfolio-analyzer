@@ -57,7 +57,7 @@ class PortfolioAnalysisSession:
         self.optimizer = optimizer
         self.mc_simulator = mc_simulator
 
-    def run_interactive_optimization(self, lambda_reg: float):
+    def run_interactive_optimization(self):
         """Run optimization and displays results for interactive use.
 
         This method is designed to be called from an `ipywidgets.interact`
@@ -72,13 +72,11 @@ class PortfolioAnalysisSession:
             return
 
         # Store the result within the session
-        self.latest_result = self.optimizer.optimize(lambda_reg=lambda_reg)
+        self.latest_result = self.optimizer.optimize()
 
         if self.latest_result and self.latest_result.success:
             display(display_optimization_summary_html(self.latest_result))
-            plot_optimal_weights(
-                self.latest_result, self.config.optimization.max_weight_per_asset, lambda_reg
-            )
+            plot_optimal_weights(self.latest_result, self.config.optimization.max_weight_per_asset)
         else:
             print("Optimization failed. Could not generate a valid portfolio.")
 
