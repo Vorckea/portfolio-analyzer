@@ -1,9 +1,9 @@
 """Logging configuration for the portfolio analyzer application."""
 
 import logging
-import os
 import sys
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 
 def setup_logging(level=logging.INFO, log_dir="logs"):
@@ -14,7 +14,9 @@ def setup_logging(level=logging.INFO, log_dir="logs"):
         log_dir (str): Directory to store log files, default is "logs".
 
     """
-    os.makedirs(log_dir, exist_ok=True)
+    log_dir = Path(log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file_path = log_dir / "portfolio_analyzer.log"
 
     file_formatter = logging.Formatter(
         "%(asctime)s - %(levelname)-8s - %(name)-25s - %(funcName)s:%(lineno)d - %(message)s",
@@ -35,7 +37,6 @@ def setup_logging(level=logging.INFO, log_dir="logs"):
     stream_handler.setLevel(level)
     root_logger.addHandler(stream_handler)
 
-    log_file_path = os.path.join(log_dir, "portfolio_analyzer.log")
     file_handler = RotatingFileHandler(log_file_path, maxBytes=5 * 1024 * 1024, backupCount=3)
     file_handler.setFormatter(file_formatter)
     file_handler.setLevel(logging.DEBUG)
