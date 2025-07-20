@@ -19,7 +19,7 @@ from portfolio_analyzer.core.utils import (
 from portfolio_analyzer.data.models import PortfolioResult
 from portfolio_analyzer.utils.exceptions import InputAlignmentError, OptimizationError
 
-from .new_objectives import NegativeSharpeRatio, PortfolioObjective, VolatilityObjective
+from .objectives import NegativeSharpeRatio, PortfolioObjective, VolatilityObjective
 
 
 class PortfolioOptimizer:
