@@ -79,19 +79,21 @@ class DataFetcher:
 
         """
         self._log_info(f"Fetching market cap data for {len(tickers)} tickers...")
-        market_caps = {}
-        for ticker in tickers:
+
+        def get_cap(ticker) -> float:
             try:
                 info = getattr(self.provider.Ticker(ticker), "info", {})
                 m_cap = info.get("marketCap")
-                market_caps[ticker] = m_cap if m_cap is not None else 0
                 if m_cap is None:
                     self._log_warning(f"Market cap not available for {ticker}. Defaulting to 0.")
+                return m_cap if m_cap is not None else 0
             except Exception as e:
                 self._log_error(
                     f"Failed to fetch market cap for {ticker} due to an error: {e}. Defaulting to 0."
                 )
-                market_caps[ticker] = 0
+                return 0
+
+        market_caps = {ticker: get_cap(ticker) for ticker in tickers}
         return pd.Series(market_caps)
 
     def fetch_ticker_info(self, ticker: str) -> Dict:
@@ -136,8 +138,8 @@ class DataFetcher:
 
     def _warn_missing_tickers(self, requested: List[str], received) -> None:
         missing = set(requested) - set(received)
-        if missing:
-            self._log_warning(f"Failed to fetch price data for: {', '.join(missing)}")
+        if any(missing):
+            self.logger.warning(f"Failed to fetch price data for: {', '.join(missing)}")
 
     def _log_info(self, msg: str) -> None:
         if self.logger:

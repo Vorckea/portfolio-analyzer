@@ -25,11 +25,12 @@ def display_optimization_summary_html(result: PortfolioResult) -> HTML:
         """  # noqa: E501
         return HTML(html)
 
-    weights_html = ""
-    if result.opt_weights is not None and not result.opt_weights.empty:
-        sorted_weights = result.opt_weights.sort_values(ascending=False)
-        for ticker, weight in sorted_weights.items():
-            weights_html += f'<li><span class="ticker-name">{ticker}</span><span class="ticker-weight">{weight:.2%}</span></li>'  # noqa: E501
+    if (opt_weights := result.opt_weights) is not None or opt_weights.empty:
+        sorted_weights = opt_weights.sort_values(ascending=False)
+        weights_html = "".join(
+            f'<li><span class="ticker-name">{ticker}</span><span class="ticker-weight">{weight:.2%}</span></li>'
+            for ticker, weight in sorted_weights.items()
+        )
     else:
         weights_html = "<li>No assets in the final portfolio.</li>"
 

@@ -200,7 +200,7 @@ class AppConfig:
     dcf: DCFConfig = field(default_factory=DCFConfig)
     backtesting: BacktestingConfig = field(default_factory=BacktestingConfig)
 
-    _instance: ClassVar["AppConfig" | None] = None
+    _instance: ClassVar["AppConfig | None"] = None
 
     @classmethod
     def get_instance(cls) -> "AppConfig":
