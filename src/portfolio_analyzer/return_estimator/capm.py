@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List
 
 import pandas as pd
 
@@ -21,7 +21,7 @@ class CAPM(ReturnEstimator):
         tickers: List[str],
         config: AppConfig,
         repository: Repository,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
     ):
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class CAPM(ReturnEstimator):
 
         for ticker in self.tickers:
             info = self.repository.fetch_ticker_info(ticker)
-            beta: Optional[float] = info.get("beta")
+            beta: float | None = info.get("beta")
             if beta is None:
                 returns[ticker] = 0
                 continue

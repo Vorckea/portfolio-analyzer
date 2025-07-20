@@ -7,7 +7,7 @@ against a benchmark ticker if provided.
 """
 
 import logging
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -77,7 +77,7 @@ class Backtester:
 
         return model_inputs.mean_returns, model_inputs.cov_matrix
 
-    def run(self, benchmark_ticker: Optional[str] = None) -> Tuple[pd.DataFrame, dict]:
+    def run(self, benchmark_ticker: str | None = None) -> Tuple[pd.DataFrame, dict]:
         """Run the backtest from the configured start to end date.
 
         At each rebalancing period, it fetches historical data, prepares model

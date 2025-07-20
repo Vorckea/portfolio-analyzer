@@ -1,5 +1,3 @@
-from typing import Optional
-
 from IPython.display import display
 from matplotlib import pyplot as plt
 
@@ -39,8 +37,8 @@ class PortfolioAnalysisSession:
         self,
         config: AppConfig,
         model_inputs: ip.ModelInputs,
-        optimizer: Optional[PortfolioOptimizer] = None,
-        mc_simulator: Optional[MonteCarloSimulator] = None,
+        optimizer: PortfolioOptimizer | None = None,
+        mc_simulator: MonteCarloSimulator | None = None,
     ):
         """Initialize the PortfolioAnalysisSession.
 
@@ -53,7 +51,7 @@ class PortfolioAnalysisSession:
         """
         self.config = config
         self.model_inputs = model_inputs
-        self.latest_result: Optional[PortfolioResult] = None
+        self.latest_result: PortfolioResult | None = None
         self.optimizer = optimizer
         self.mc_simulator = mc_simulator
 

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 
@@ -13,7 +13,7 @@ class Repository:
     Only complete and valid data is cached; failed or incomplete requests are not cached.
     """
 
-    def __init__(self, data_fetcher: DataFetcher, logger: Optional[logging.Logger] = None):
+    def __init__(self, data_fetcher: DataFetcher, logger: logging.Logger | None = None):
         self.data_fetcher = data_fetcher
         self.logger = logger or logging.getLogger(__name__)
         self._price_cache: Dict[Tuple[Tuple[str, ...], str, str], pd.DataFrame] = {}
@@ -68,7 +68,7 @@ class Repository:
         self.logger.warning(f"Fetched ticker info is empty for: {ticker}")
         return data
 
-    def fetch_cashflow(self, ticker: str) -> Optional[pd.DataFrame]:
+    def fetch_cashflow(self, ticker: str) -> pd.DataFrame | None:
         self._validate_ticker(ticker)
         if ticker in self._cashflow_cache:
             self.logger.debug(f"Cache hit for cashflow: {ticker}")

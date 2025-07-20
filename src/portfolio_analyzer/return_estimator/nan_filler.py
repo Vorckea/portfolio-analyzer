@@ -1,5 +1,3 @@
-from typing import Optional
-
 import pandas as pd
 
 from .base import ReturnEstimator
@@ -9,7 +7,7 @@ class FillNaNReturn(ReturnEstimator):
     def __init__(self, returns: ReturnEstimator, replacement_returns: ReturnEstimator):
         self.returns: ReturnEstimator = returns
         self.replacement_returns: ReturnEstimator = replacement_returns
-        self.filled_returns: Optional[pd.Series] = None
+        self.filled_returns: pd.Series | None = None
 
     def _fill_nan_returns(self) -> pd.Series:
         """Fill both NaN and 0 values in the returns with replacement returns.

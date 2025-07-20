@@ -4,7 +4,7 @@ This module provides the PortfolioOptimizer class and supporting functions
 for optimizing asset allocations using mean-variance analysis and regularization.
 """
 
-from typing import List, Optional
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -58,7 +58,7 @@ class PortfolioOptimizer:
         self.config = config
         self.objective = objective
 
-    def optimize(self) -> Optional[PortfolioResult]:
+    def optimize(self) -> PortfolioResult | None:
         """Perform portfolio optimization to find the tangency portfolio.
 
         This method seeks to maximize the Sharpe ratio, potentially with L2

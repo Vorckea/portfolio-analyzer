@@ -1,5 +1,3 @@
-from typing import Optional
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -351,7 +349,7 @@ def plot_efficient_frontier(
     frontier_df: pd.DataFrame,
     max_sharpe_result: PortfolioResult,
     min_vol_result: PortfolioResult,
-    current_opt_result: Optional[PortfolioResult] = None,
+    current_opt_result: PortfolioResult | None = None,
     ax: plt.Axes = None,
 ) -> None:
     """Plot the efficient frontier with key portfolios highlighted.
@@ -441,8 +439,8 @@ def plot_efficient_frontier(
 
 def plot_backtest_results(
     backtest_results: pd.DataFrame,
-    benchmark_ticker: Optional[str] = None,
-    ax: Optional[plt.Axes] = None,
+    benchmark_ticker: str | None = None,
+    ax: plt.Axes | None = None,
 ) -> None:
     """Plot the portfolio value over time from a backtest against a benchmark.
 

@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 
@@ -16,8 +14,8 @@ class BlackLitterman(ReturnEstimator):
         start_date: str,
         end_date: str,
         tickers: str,
-        assets_in_view: Optional[pd.DataFrame] = None,
-        view_confidence: Optional[pd.DataFrame] = None,
+        assets_in_view: pd.DataFrame | None = None,
+        view_confidence: pd.DataFrame | None = None,
         config: AppConfig = None,
         repository: Repository = None,
     ):

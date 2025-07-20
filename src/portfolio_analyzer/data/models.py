@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -26,8 +26,8 @@ class ModelInputs:
     log_returns: pd.DataFrame
     close_df: pd.DataFrame
     final_tickers: list[str]
-    hist_mean_returns: Optional[pd.Series] = None
-    implied_equilibrium_returns: Optional[pd.Series] = None
+    hist_mean_returns: pd.Series | None = None
+    implied_equilibrium_returns: pd.Series | None = None
 
 
 @dataclass
@@ -48,9 +48,9 @@ class PortfolioResult:
     """
 
     success: bool
-    opt_weights: Optional[pd.DataFrame] = None
-    mean_returns: Optional[pd.Series] = None
-    cov_matrix: Optional[pd.DataFrame] = None
+    opt_weights: pd.DataFrame | None = None
+    mean_returns: pd.Series | None = None
+    cov_matrix: pd.DataFrame | None = None
     log_return: float = 0.0
     std_dev: float = 0.0
     sharpe_ratio: float = 0.0

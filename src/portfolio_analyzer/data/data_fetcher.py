@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import pandas as pd
 
@@ -18,7 +18,7 @@ class MarketDataProvider(ABC):
 class DataFetcher:
     """DataFetcher class to handle fetching historical price data, market capitalizations, and ticker information."""  # noqa: E501
 
-    def __init__(self, provider: MarketDataProvider, logger: Optional[logging.Logger] = None):
+    def __init__(self, provider: MarketDataProvider, logger: logging.Logger | None = None):
         """Initialize the DataFetcher with a market data provider and an optional logger.
 
         Args:

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 import pandas as pd
 
@@ -17,7 +17,7 @@ class EWMA(ReturnEstimator):
         end_date: str,
         tickers: List[str],
         repository: Repository,
-        config: Optional[AppConfig] = None,
+        config: AppConfig | None = None,
     ):
         """Exponential Weighted Moving Average (EWMA) Return Estimator with optional shrinkage.
 

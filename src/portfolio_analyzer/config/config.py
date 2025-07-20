@@ -3,7 +3,7 @@
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List
 
 __all__ = [
     "DataRangeConfig",
@@ -200,7 +200,7 @@ class AppConfig:
     dcf: DCFConfig = field(default_factory=DCFConfig)
     backtesting: BacktestingConfig = field(default_factory=BacktestingConfig)
 
-    _instance: ClassVar[Optional["AppConfig"]] = None
+    _instance: ClassVar["AppConfig" | None] = None
 
     @classmethod
     def get_instance(cls) -> "AppConfig":
