@@ -122,8 +122,7 @@ class Backtester:
 
         # Filter to tickers with data for the whole period to avoid errors
         full_price_data = full_price_data.dropna(axis=1, how="any")
-        valid_tickers = [t for t in self.config.tickers if t in full_price_data.columns]
-        if not valid_tickers:
+        if not (valid_tickers := [t for t in self.config.tickers if t in full_price_data.columns]):
             logger.error("No tickers have complete data for the specified backtest range.")
             return pd.DataFrame(), {}
         logger.info("Running backtest with %d valid tickers.", len(valid_tickers))

@@ -25,12 +25,10 @@ class BlendedReturn(ReturnEstimator):
 
         if not weighted_estimators:
             raise ValueError("At least one estimator must be provided.")
-
-        for est, weight in weighted_estimators:
-            if weight < 0:
-                raise ValueError("Weights must be positive or zero.")
-            if not isinstance(est, ReturnEstimator):
-                raise TypeError(f"Expected ReturnEstimator, got {type(est)}")
+        if any(weight < 0 for _, weight in weighted_estimators):
+            raise ValueError("Weights must be positive or zero.")
+        if any(not isinstance(est, ReturnEstimator) for est, _ in weighted_estimators):
+            raise TypeError("All estimators must be instances of ReturnEstimator.")
 
         total_weight = sum(weight for _, weight in weighted_estimators)
         if total_weight == 0:
@@ -51,10 +49,7 @@ class BlendedReturn(ReturnEstimator):
             pd.Series: Blended returns series.
 
         """
-        returns_list = []
-        for est, weight in self.weighted_estimators:
-            returns = est.get_returns()
-            returns_list.append(returns * weight)
+        returns_list = [est.get_returns() * weight for est, weight in self.weighted_estimators]
 
         # Concatenate all weighted returns into a DataFrame, aligning on index
         blended_df = pd.concat(returns_list, axis=1, join="outer").fillna(0)

@@ -83,7 +83,7 @@ class Repository:
 
     def _validate_tickers(self, tickers: List[str]) -> None:
         """Validate that tickers are provided and not empty."""
-        if not tickers or any(not ticker for ticker in tickers):
+        if not tickers or not all(tickers for tickers in tickers):
             self.logger.error("No valid tickers provided.")
             raise ValueError("No valid tickers provided.")
 

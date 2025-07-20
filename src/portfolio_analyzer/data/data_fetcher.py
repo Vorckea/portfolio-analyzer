@@ -137,8 +137,7 @@ class DataFetcher:
         raise ValueError("No 'Close' column found in price data.")
 
     def _warn_missing_tickers(self, requested: List[str], received) -> None:
-        missing = set(requested) - set(received)
-        if any(missing):
+        if any(missing := set(requested) - set(received)):
             self.logger.warning(f"Failed to fetch price data for: {', '.join(missing)}")
 
     def _log_info(self, msg: str) -> None:
