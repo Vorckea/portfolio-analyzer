@@ -12,7 +12,7 @@ def portfolio_return(weights: np.ndarray, mean_returns: np.ndarray) -> float:
         float: The expected portfolio return.
 
     """
-    return np.sum(weights * mean_returns)
+    return float(np.dot(weights, mean_returns))
 
 
 def portfolio_volatility(weights: np.ndarray, cov_matrix: np.ndarray) -> float:

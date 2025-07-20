@@ -16,11 +16,10 @@ class FillNaNReturn(ReturnEstimator):
             pd.Series: Returns with NaN and 0 values filled.
 
         """
-        filled_returns = self.returns.get_returns().replace(0, pd.NA)
-        filled_returns = filled_returns.fillna(
-            self.replacement_returns.get_returns()
-        ).infer_objects(copy=False)
-        return filled_returns
+        base = self.returns.get_returns()
+        replacement = self.replacement_returns.get_returns()
+        filled = base.replace(0, pd.NA).combine_first(replacement)
+        return filled
 
     def get_returns(self) -> pd.Series:
         if self.filled_returns is None:

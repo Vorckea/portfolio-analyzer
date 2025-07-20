@@ -43,19 +43,20 @@ def prepare_model_inputs(
         start_date=start_date,
         end_date=end_date,
     )
+
     log_returns = calculate_log_returns(price_df)
     cov_matrix = calculate_annualized_covariance(
         log_returns=log_returns,
         trading_days=config.trading_days_per_year,
     )
-    final_tickers = sorted(list(mean_returns.index.intersection(cov_matrix.index)))
 
+    final_tickers = mean_returns.index.intersection(cov_matrix.index).sort_values()
     model_inputs = ModelInputs(
-        mean_returns=mean_returns,
-        cov_matrix=cov_matrix,
-        log_returns=log_returns.reindex(columns=final_tickers),
-        close_df=price_df.reindex(columns=final_tickers),
-        final_tickers=final_tickers,
+        mean_returns=mean_returns.loc[final_tickers],
+        cov_matrix=cov_matrix.loc[final_tickers, final_tickers],
+        log_returns=log_returns[final_tickers],
+        close_df=price_df[final_tickers],
+        final_tickers=final_tickers.tolist(),
     )
     logger.info("--- Data Pipeline Finished ---")
     return model_inputs
