@@ -18,7 +18,7 @@ class FillNaNReturn(ReturnEstimator):
         """
         base = self.returns.get_returns()
         replacement = self.replacement_returns.get_returns()
-        filled = base.replace(0, pd.NA).combine_first(replacement)
+        filled = base.mask(base == 0).combine_first(replacement)
         return filled
 
     def get_returns(self) -> pd.Series:

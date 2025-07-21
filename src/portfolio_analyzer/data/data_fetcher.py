@@ -96,7 +96,7 @@ class DataFetcher:
                 )
                 return 0
 
-        return pd.Series(map(get_cap, tickers), index=tickers)
+        return pd.Series([get_cap(ticker) for ticker in tickers], index=tickers)
 
     def fetch_ticker_info(self, ticker: str) -> Dict:
         """Fetch detailed information for a specific ticker symbol.

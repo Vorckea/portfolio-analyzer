@@ -175,7 +175,6 @@ class AppConfig:
             "SEA1.OL",
             "SALME.OL",
             "KOG.OL",
-            "KNEBV.HE",
             "SHB-A.ST",
             "MULTI.OL",
             "NORCO.OL",
