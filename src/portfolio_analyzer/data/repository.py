@@ -33,7 +33,7 @@ class Repository:
             start_date=start_date,
             end_date=end_date,
         )
-        if not data.empty and not data.isnull().all().all():
+        if not data.empty and data.notna().any().any():
             self._price_cache[cache_key] = data.copy()
             return data
         self.logger.warning(f"Fetched price data is empty or contains only NaNs for: {cache_key}")
