@@ -4,8 +4,6 @@ This module provides the PortfolioOptimizer class and supporting functions
 for optimizing asset allocations using mean-variance analysis and regularization.
 """
 
-from typing import List
-
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -19,7 +17,7 @@ from portfolio_analyzer.core.utils import (
 from portfolio_analyzer.data.models import PortfolioResult
 from portfolio_analyzer.utils.exceptions import InputAlignmentError, OptimizationError
 
-from .objectives import NegativeSharpeRatio, PortfolioObjective, VolatilityObjective
+from .objectives import PortfolioObjective
 
 
 class PortfolioOptimizer:
@@ -131,96 +129,3 @@ class PortfolioOptimizer:
             arithmetic_return=arithmetic_return,
             display_sharpe=display_sharpe,
         )
-
-    def calculate_efficient_frontier(
-        self, num_points: int = 100
-    ) -> tuple[pd.DataFrame, PortfolioResult, PortfolioResult]:
-        """Calculate the efficient frontier for the given assets.
-
-        The efficient frontier is the set of optimal portfolios that offer the
-        highest expected return for a given level of risk (volatility).
-
-        Args:
-            num_points (int): The number of points to calculate along the frontier.
-
-        Returns:
-            tuple[pd.DataFrame, PortfolioResult, PortfolioResult]: A tuple containing:
-                - A DataFrame with the 'Return' and 'Volatility' for each point
-                  on the frontier.
-                - The result for the Maximum Sharpe Ratio portfolio.
-                - The result for the Minimum Volatility portfolio.
-
-        Raises:
-            OptimizationError: If the optimization fails for key points on the
-                frontier (e.g., min volatility or max Sharpe).
-
-        """
-        num_asset = len(self.tickers)
-        bounds = tuple((0, 1.0) for _ in range(num_asset))
-        initial_weights = np.array([1.0 / num_asset] * num_asset)
-
-        # 1. Find Min Volatility portfolio
-        min_vol_constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
-        min_vol_opt = minimize(
-            VolatilityObjective(self.cov_matrix.values),
-            initial_weights,
-            method="SLSQP",
-            bounds=bounds,
-            constraints=min_vol_constraints,
-        )
-        if not min_vol_opt.success:
-            raise OptimizationError("Could not find the minimum volatility portfolio.")
-        min_vol_result = self._create_result_from_weights(min_vol_opt.x)
-
-        # 2. Find the Max Sharpe Ratio portfolio directly using the optimizer
-        # We use lambda_reg=0 to find the theoretical max Sharpe on the frontier
-        max_sharpe_opt = minimize(
-            NegativeSharpeRatio(
-                self.mean_returns.values,
-                self.cov_matrix.values,
-                self.config.risk_free_rate,
-                0.0,  # No regularization for max Sharpe
-            ),
-            initial_weights,
-            method="SLSQP",
-            bounds=bounds,
-            constraints={"type": "eq", "fun": lambda w: np.sum(w) - 1},
-        )
-        max_sharpe_result = self._create_result_from_weights(max_sharpe_opt.x)
-        if not max_sharpe_result or not max_sharpe_result.success:
-            raise OptimizationError("Could not find the maximum Sharpe ratio portfolio.")
-
-        min_return_log = min_vol_result.log_return
-        max_return_log = max(max_sharpe_result.log_return, self.mean_returns.max())
-        target_log_returns = np.linspace(min_return_log, max_return_log, num_points)
-
-        # 4. Calculate frontier points by minimizing volatility for each target return
-        frontier_portfolios: List[dict] = []
-        for target_return in target_log_returns:
-            constraints = [
-                {"type": "eq", "fun": lambda w: np.sum(w) - 1},
-                {
-                    "type": "eq",
-                    "fun": lambda w: portfolio_return(w, self.mean_returns.values) - target_return,
-                },
-            ]
-            opt = minimize(
-                VolatilityObjective(self.cov_matrix.values),
-                initial_weights,
-                method="SLSQP",
-                bounds=bounds,
-                constraints=constraints,
-            )
-            if opt.success:
-                frontier_portfolios.append({"Return": target_return, "Volatility": opt.fun})
-
-        if not frontier_portfolios:
-            raise OptimizationError("Could not calculate any points for the efficient frontier.")
-
-        frontier_df = pd.DataFrame(frontier_portfolios)
-        log_risk_free_rate = np.log(1 + self.config.risk_free_rate)
-        frontier_df["Sharpe"] = (frontier_df["Return"] - log_risk_free_rate) / frontier_df[
-            "Volatility"
-        ]
-
-        return frontier_df, max_sharpe_result, min_vol_result
