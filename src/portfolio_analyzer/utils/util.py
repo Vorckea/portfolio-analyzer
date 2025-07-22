@@ -19,7 +19,7 @@ def calculate_log_returns(close_df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: DataFrame containing daily log returns, with the same index as close_df.
 
     """
-    return np.log(close_df / close_df.shift(1)).dropna()
+    return close_df.pct_change().add(1).pipe(np.log).dropna()
 
 
 def calculate_annualized_covariance(
