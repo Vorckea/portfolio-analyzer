@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Dict, List, Tuple
+from collections import defaultdict
 
 import pandas as pd
 
@@ -16,7 +17,7 @@ class Repository:
     def __init__(self, data_fetcher: DataFetcher, logger: logging.Logger | None = None):
         self.data_fetcher = data_fetcher
         self.logger = logger or logging.getLogger(__name__)
-        self._price_cache: Dict[Tuple[Tuple[str, ...], str, str], pd.DataFrame] = {}
+        self._price_cache: defaultdict[Tuple[str, ...], pd.DataFrame] = defaultdict(pd.DataFrame)
         self._market_cap_cache: Dict[Tuple[str, ...], pd.Series] = {}
         self._ticker_info_cache: Dict[str, Dict] = {}
         self._cashflow_cache: Dict[str, pd.DataFrame] = {}
@@ -24,7 +25,7 @@ class Repository:
     def fetch_price_data(self, tickers: List[str], start_date: str, end_date: str) -> pd.DataFrame:
         self._validate_tickers(tickers)
         cache_key = (tuple(sorted(tickers)), start_date, end_date)
-        if cache_key in self._price_cache:
+        if not self._price_cache[cache_key].empty:
             self.logger.debug(f"Cache hit for price data: {cache_key}")
             return self._price_cache[cache_key].copy()
         self.logger.debug(f"Cache miss for price data: {cache_key}. Fetching from data source.")
