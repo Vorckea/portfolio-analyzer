@@ -49,10 +49,10 @@ class BlendedReturn(ReturnEstimator):
             pd.Series: Blended returns series.
 
         """
-        returns_list = [est.get_returns() * weight for est, weight in self.weighted_estimators]
-
-        # Concatenate all weighted returns into a DataFrame, aligning on index
-        blended = pd.concat(returns_list, axis=1, join="outer").fillna(0).sum(axis=1)
+        return_list = [
+            est.get_returns().mul(weight, fill_value=0) for est, weight in self.weighted_estimators
+        ]
+        blended = pd.concat(return_list, axis=1, join="outer").sum(axis=1)
         return blended
 
     def get_returns(self) -> pd.Series:
