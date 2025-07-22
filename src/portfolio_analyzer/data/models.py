@@ -1,61 +1,51 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ModelInputs:
-    """Holds all the data required for the optimization and analysis steps.
-
-    Attributes:
-        mean_returns (pd.Series): The final mean return vector for optimization.
-        cov_matrix (pd.DataFrame): The final covariance matrix for optimization.
-        log_returns (pd.DataFrame): The historical log returns of the assets.
-        close_df (pd.DataFrame): The historical closing prices of the assets.
-        final_tickers (List[str]): The list of tickers included in the final model.
-        hist_mean_returns (pd.Series): Historical mean returns before any blending.
-        implied_equilibrium_returns (Optional[pd.Series]): Market-implied returns
-            from the Black-Litterman model.
-
-    """
-
     mean_returns: pd.Series
     cov_matrix: pd.DataFrame
     log_returns: pd.DataFrame
     close_df: pd.DataFrame
-    final_tickers: list[str]
+    final_tickers: Tuple[str, ...]
+    # Optional/derived fields
     hist_mean_returns: pd.Series | None = None
     implied_equilibrium_returns: pd.Series | None = None
 
+    def __post_init__(self):
+        if not self.final_tickers:
+            raise ValueError("final_tickers must not be empty.")
 
-@dataclass
+
+@dataclass(frozen=True, slots=True)
 class PortfolioResult:
-    """Holds the results of a portfolio optimization.
-
-    Attributes:
-        success (bool): Whether the optimization converged successfully.
-        opt_weights (Optional[pd.Series]): The optimal asset weights.
-        mean_returns (Optional[pd.Series]): The mean returns vector used.
-        cov_matrix (Optional[pd.DataFrame]): The covariance matrix used.
-        log_return (Optional[float]): The expected logarithmic return of the portfolio.
-        std_dev (Optional[float]): The expected volatility of the portfolio.
-        sharpe_ratio (Optional[float]): The expected Sharpe ratio of the portfolio.
-        arithmetic_return (Optional[float]): The expected arithmetic return.
-        display_sharpe (Optional[float]): The Sharpe ratio for display purposes.
-
-    """
-
     success: bool
-    opt_weights: pd.DataFrame | None = None
-    mean_returns: pd.Series | None = None
-    cov_matrix: pd.DataFrame | None = None
-    log_return: float = 0.0
-    std_dev: float = 0.0
-    sharpe_ratio: float = 0.0
-    arithmetic_return: float = 0.0
-    display_sharpe: float = 0.0
+    opt_weights: pd.Series
+    mean_returns: pd.Series
+    cov_matrix: pd.DataFrame
+    log_return: float
+    std_dev: float
+    sharpe_ratio: float
+    arithmetic_return: float
+    display_sharpe: float
+
+    @classmethod
+    def failure(cls) -> "PortfolioResult":
+        return cls(
+            success=False,
+            opt_weights=pd.Series(dtype=float),
+            mean_returns=pd.Series(dtype=float),
+            cov_matrix=pd.DataFrame(),
+            log_return=0.0,
+            std_dev=0.0,
+            sharpe_ratio=0.0,
+            arithmetic_return=0.0,
+            display_sharpe=0.0,
+        )
 
 
 @dataclass

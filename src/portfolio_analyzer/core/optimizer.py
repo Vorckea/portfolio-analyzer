@@ -99,7 +99,7 @@ class PortfolioOptimizer:
         final_weights = pd.Series(weights, index=self.tickers)
         final_weights = final_weights[final_weights > self.config.optimization.min_weight_per_asset]
         if final_weights.empty:
-            return PortfolioResult(success=False)
+            return PortfolioResult.failure()
 
         final_weights /= final_weights.sum()
         mean_returns_filtered = self.mean_returns.loc[final_weights.index]
