@@ -6,22 +6,6 @@ import pandas as pd
 
 
 @dataclass(frozen=True, slots=True)
-class ModelInputs:
-    mean_returns: pd.Series
-    cov_matrix: pd.DataFrame
-    log_returns: pd.DataFrame
-    close_df: pd.DataFrame
-    final_tickers: Tuple[str, ...]
-    # Optional/derived fields
-    hist_mean_returns: pd.Series | None = None
-    implied_equilibrium_returns: pd.Series | None = None
-
-    def __post_init__(self):
-        if not self.final_tickers:
-            raise ValueError("final_tickers must not be empty.")
-
-
-@dataclass(frozen=True, slots=True)
 class PortfolioResult:
     success: bool
     opt_weights: pd.Series

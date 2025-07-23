@@ -4,7 +4,6 @@ from matplotlib import pyplot as plt
 from portfolio_analyzer.analysis.monte_carlo_simulator import MonteCarloSimulator
 from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.core.optimizer import PortfolioOptimizer
-from portfolio_analyzer.data import models as ip
 from portfolio_analyzer.data.models import PortfolioResult
 from portfolio_analyzer.reporting.display import (
     display_optimization_summary_html,
@@ -36,7 +35,6 @@ class PortfolioAnalysisSession:
     def __init__(
         self,
         config: AppConfig,
-        model_inputs: ip.ModelInputs,
         optimizer: PortfolioOptimizer | None = None,
         mc_simulator: MonteCarloSimulator | None = None,
     ):
@@ -50,7 +48,6 @@ class PortfolioAnalysisSession:
 
         """
         self.config = config
-        self.model_inputs = model_inputs
         self.latest_result: PortfolioResult | None = None
         self.optimizer = optimizer
         self.mc_simulator = mc_simulator

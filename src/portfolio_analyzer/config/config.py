@@ -182,6 +182,7 @@ class AppConfig:
             "SWED-A.ST",
             "ORNBV.HE",
             "MAERSK-B.CO",
+            "BOL.ST",
             "0P00000MVB.IR",
             "0P0001IMY8.F",
             "0P00000B0I",

@@ -10,10 +10,12 @@ import logging
 from typing import List
 
 from ..config.config import AppConfig
-from ..data.models import ModelInputs
-from ..data.repository import Repository
 from ..return_estimator.base import ReturnEstimator
 from ..utils.util import calculate_annualized_covariance, calculate_log_returns
+
+# from ..data.models import ModelInputs
+from .new_models import AssetUniverse, ModelInputs, PriceData, ReturnEstimates
+from .repository import Repository
 
 logger = logging.getLogger(__name__)
 
@@ -51,12 +53,28 @@ def prepare_model_inputs(
     )
 
     final_tickers = mean_returns.index.intersection(cov_matrix.index).sort_values()
-    model_inputs = ModelInputs(
+    """model_inputs = ModelInputs(
         mean_returns=mean_returns.loc[final_tickers],
         cov_matrix=cov_matrix.loc[final_tickers, final_tickers],
         log_returns=log_returns[final_tickers],
         close_df=price_df[final_tickers],
         final_tickers=final_tickers.tolist(),
+    )"""
+
+    universe = AssetUniverse(tickers=tuple(final_tickers))
+    returns = ReturnEstimates(
+        expected_returns=mean_returns.loc[final_tickers],
+        covariance=cov_matrix.loc[final_tickers, final_tickers],
     )
+    prices = PriceData(
+        log_returns=log_returns[final_tickers],
+        close_prices=price_df[final_tickers],
+    )
+    model_inputs = ModelInputs(
+        universe=universe,
+        returns=returns,
+        prices=prices,
+    )
+
     logger.info("--- Data Pipeline Finished ---")
     return model_inputs

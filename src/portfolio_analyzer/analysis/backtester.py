@@ -21,7 +21,7 @@ from portfolio_analyzer.config.config import AppConfig
 from portfolio_analyzer.core.optimizer import PortfolioOptimizer
 from portfolio_analyzer.data.repository import Repository
 
-from ..data import new_input_preparator as newip
+from ..data import input_preparator as newip
 from ..return_estimator import EWMA
 from ..utils.util import calculate_log_returns
 
