@@ -1,3 +1,5 @@
+import logging
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -6,6 +8,10 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
 from portfolio_analyzer.data.models import PortfolioResult, SimulationResult
+
+CORRELATION_THRESHOLD = 0.3
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_correlation_matrix(cov_matrix: pd.DataFrame) -> pd.DataFrame:
@@ -28,10 +34,9 @@ def calculate_correlation_matrix(cov_matrix: pd.DataFrame) -> pd.DataFrame:
 
 def plot_correlation_heatmap(correlation_matrix: pd.DataFrame) -> None:
     if correlation_matrix.empty or len(correlation_matrix) < 2:
-        print("Correlation matrix has fewer than 2 assets. Skipping heatmap.")
+        logger.warning("Correlation matrix has fewer than 2 assets. Skipping heatmap.")
         return
-
-    print("\nDisplaying Clustered Correlation Heatmap:")
+    logger.info("Displaying Clustered Correlation Heatmap:")
     figsize = (10, 8) if len(correlation_matrix) <= 15 else (12, 10)
     annot_size = 7 if len(correlation_matrix) <= 10 else 5
 
@@ -51,11 +56,11 @@ def plot_correlation_heatmap(correlation_matrix: pd.DataFrame) -> None:
         plt.show()
         plt.close(g.fig)
     except Exception as e:
-        print(f"Could not generate clustermap: {e}")
+        logger.error(f"Could not generate clustermap: {e}")
 
 
 def plot_correlation_network(
-    correlation_matrix: pd.DataFrame, threshold: float = 0.3, ax: plt.Axes = None
+    correlation_matrix: pd.DataFrame, threshold: float = CORRELATION_THRESHOLD, ax: plt.Axes = None
 ) -> None:
     """Display a network graph of asset correlations.
 
@@ -66,7 +71,7 @@ def plot_correlation_network(
         if ax:
             ax.text(0.5, 0.5, "Not enough data for network.", ha="center", va="center")
         else:
-            print("Correlation matrix has fewer than 2 assets. Skipping network graph.")
+            logger.warning("Correlation matrix has fewer than 2 assets. Skipping network graph.")
         return
 
     if ax is None:
@@ -81,7 +86,7 @@ def plot_correlation_network(
     ]
     G.remove_edges_from(edges_to_remove)
 
-    print("\nDisplaying Correlation Network Graph:")
+    logger.info("Displaying Correlation Network Graph:")
 
     # --- Setup for plotting ---
     pos = nx.spring_layout(G, k=0.8 / np.sqrt(G.number_of_nodes()), iterations=50)
@@ -144,24 +149,24 @@ def plot_correlation_network(
 def display_optimization_summary(result: PortfolioResult) -> None:
     """Prints a formatted summary of the optimization results."""
     if not result or not result.success:
-        print("Optimization failed or no results to display.")
+        logger.warning("Optimization failed or no results to display.")
         return
 
-    print("\n--- Optimization Results ---\n")
-    print("Optimal Weights:")
+    logger.info("--- Optimization Results ---")
+    logger.info("Optimal Weights:")
     if result.opt_weights is not None and not result.opt_weights.empty:
         for i, (ticker, weight) in enumerate(
             result.opt_weights.sort_values(ascending=False).items(), 1
         ):
-            print(f"\t{i}. {ticker}: {weight:.2%}")
-        print(f"\tTotal Sum: {result.opt_weights.sum():.4f}")
+            logger.info(f"\t{i}. {ticker}: {weight:.2%}")
+        logger.info(f"\tTotal Sum: {result.opt_weights.sum():.4f}")
     else:
-        print("\tNo assets in the final portfolio.")
+        logger.info("\tNo assets in the final portfolio.")
 
-    print("\nPortfolio Performance Metrics:")
-    print(f"\tExpected Annualized Return (Arithmetic): {result.arithmetic_return:.2%}")
-    print(f"\tAnnualized Volatility: {result.std_dev:.2%}")
-    print(f"\tSharpe Ratio (Arithmetic Return based): {result.display_sharpe:.2f}")
+    logger.info("\nPortfolio Performance Metrics:")
+    logger.info(f"\tExpected Annualized Return (Arithmetic): {result.arithmetic_return:.2%}")
+    logger.info(f"\tAnnualized Volatility: {result.std_dev:.2%}")
+    logger.info(f"\tSharpe Ratio (Arithmetic Return based): {result.display_sharpe:.2f}")
 
 
 def plot_optimal_weights(
@@ -244,15 +249,14 @@ def display_simulation_summary(result: SimulationResult) -> None:
         result (SimulationResult): The Monte Carlo simulation result object.
 
     """
-    print("\n--- Simulation Results Summary ---")
-    print(f"Final Portfolio Value (Median): {result.stats['median']:,.2f}")
-    print(f"Final Portfolio Value (Mean):   {result.stats['mean']:,.2f}")
-    print(f"Standard Deviation:             {result.stats['std_dev']:,.2f}")
-    print("-" * 35)
-    print(f"95% VaR (Value at Risk):        {result.stats['var_95']:,.2f}")
-    print(f"95% CVaR (Conditional VaR):     {result.stats['cvar_95']:,.2f}")
-    print(f"Probability of Profit:          {result.stats['prob_breakeven']:.2%}")
-    print("-" * 35)
+    logger.info("--- Simulation Results Summary ---")
+    logger.info(f"Final Portfolio Value (Median): {result.stats['median']:.2f}")
+    logger.info(f"Final Portfolio Value (Mean):   {result.stats['mean']:.2f}")
+    logger.info(f"Standard Deviation:             {result.stats['std_dev']:.2f}")
+    logger.info(f"95% VaR (Value at Risk):        {result.stats['var_95']:.2f}")
+    logger.info(f"95% CVaR (Conditional VaR):     {result.stats['cvar_95']:.2f}")
+    logger.info(f"Probability of Profit:          {result.stats['prob_breakeven']:.2%}")
+    logger.info("-" * 35)
 
 
 def plot_simulation_distribution(result: SimulationResult, ax: plt.Axes = None):

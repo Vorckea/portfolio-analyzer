@@ -71,7 +71,7 @@ class DataFetcher:
             .ffill()
         )
 
-    def fetch_market_caps(self, tickers: List[str]) -> pd.Series:
+    def fetch_market_caps(self, tickers: list[str]) -> pd.Series:
         """Fetch market capitalization data for the given tickers.
 
         Args:
