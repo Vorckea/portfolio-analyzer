@@ -90,6 +90,4 @@ class Repository:
 
     def _validate_ticker(self, ticker: str) -> None:
         """Validate that a single ticker is provided and not empty."""
-        if not ticker:
-            self.logger.error("No valid ticker provided.")
-            raise ValueError("No valid ticker provided.")
+        self._validate_tickers([ticker])
