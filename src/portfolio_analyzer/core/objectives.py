@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
+import numpy.typing as npt
+import pandas as pd
 
 
 class PortfolioObjective(ABC):
     @abstractmethod
-    def __call__(self, weights: np.ndarray) -> float:
+    def __call__(self, weights: npt.NDArray[np.float64]) -> float:
         """Evaluate the objective function.
 
         Args:
@@ -19,13 +21,19 @@ class PortfolioObjective(ABC):
 
 
 class NegativeSharpeRatio(PortfolioObjective):
-    def __init__(self, mean_returns, cov_matrix, risk_free_rate, lambda_reg):
-        self.mean_returns = mean_returns
-        self.cov_matrix = cov_matrix
+    def __init__(
+        self,
+        mean_returns: npt.NDArray[np.float64] | pd.Series,
+        cov_matrix: npt.NDArray[np.float64] | pd.DataFrame,
+        risk_free_rate: float,
+        lambda_reg: float,
+    ) -> None:
+        self.mean_returns = np.asarray(mean_returns, dtype=np.float64)
+        self.cov_matrix = np.asarray(cov_matrix, dtype=np.float64)
         self.risk_free_rate = risk_free_rate
         self.lambda_reg = lambda_reg
 
-    def __call__(self, weights: np.ndarray) -> float:
+    def __call__(self, weights: npt.NDArray[np.float64]) -> float:
         portfolio_return = np.sum(weights * self.mean_returns)
         portfolio_volatility = np.sqrt(weights.T @ self.cov_matrix @ weights)
         log_risk_free_rate = np.log(1 + self.risk_free_rate)
@@ -40,8 +48,8 @@ class NegativeSharpeRatio(PortfolioObjective):
 
 
 class VolatilityObjective(PortfolioObjective):
-    def __init__(self, cov_matrix):
-        self.cov_matrix = cov_matrix
+    def __init__(self, cov_matrix: npt.NDArray[np.float64] | pd.DataFrame):
+        self.cov_matrix = np.asarray(cov_matrix, dtype=np.float64)
 
-    def __call__(self, weights: np.ndarray) -> float:
-        return np.sqrt(weights.T @ self.cov_matrix @ weights)
+    def __call__(self, weights: npt.NDArray[np.float64]) -> float:
+        return np.sqrt(weights.T @ self.cov_matrix @ weights).item()

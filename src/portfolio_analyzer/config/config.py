@@ -219,6 +219,11 @@ class AppConfig:
         """Explicitly set the singleton instance (useful for testing or custom configs)."""
         cls._instance = config
 
+    @staticmethod
+    def default() -> "AppConfig":
+        config = AppConfig.get_instance()
+        return config.model_copy(deep=False)
+
     def model_copy(self, deep: bool = True) -> "AppConfig":
         """Create a deep copy of the AppConfig instance.
 
