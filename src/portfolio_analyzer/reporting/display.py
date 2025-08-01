@@ -1,8 +1,22 @@
+from pathlib import Path
+
 import pandas as pd
 from IPython.display import HTML
 
 from portfolio_analyzer.data.models import PortfolioResult, SimulationResult
 from portfolio_analyzer.utils.html_helpers import get_summary_card_html
+
+
+def _inject_css() -> str:
+    """Read and inject the summary_card.css file as a <style> block for notebook display."""
+    css_path = Path(__file__).parent / "summary_card.css"
+    try:
+        with css_path.open("r", encoding="utf-8") as f:
+            css = f.read()
+        return f"<style>{css}</style>"
+    except Exception:
+        # If CSS file is missing, skip styling
+        return ""
 
 
 def display_optimization_summary_html(result: PortfolioResult) -> HTML:
@@ -15,9 +29,11 @@ def display_optimization_summary_html(result: PortfolioResult) -> HTML:
         HTML: An IPython.display.HTML object containing the formatted summary.
 
     """
+    css_html = _inject_css()
     if not result or not result.success:
-        html = """
-        <div style="display: flex; justify-content: flex-start;">
+        html = f"""
+        {css_html}
+        <div class="summary-container">
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #c0392b; border: 1px solid #e74c3c; background-color: #fbe9e7; border-radius: 10px; padding: 20px; width: 550px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                 <strong>Optimization Failed:</strong> Could not generate a valid portfolio.
             </div>
@@ -43,7 +59,7 @@ def display_optimization_summary_html(result: PortfolioResult) -> HTML:
     <h4>Asset Allocation</h4>
     <ul class="weights-list">{weights_html}</ul>
     """  # noqa: E501
-    return HTML(get_summary_card_html("Optimal Portfolio Summary", "", body_html))
+    return HTML(css_html + get_summary_card_html("Optimal Portfolio Summary", "", body_html))
 
 
 def display_simulation_summary_html(result: SimulationResult) -> HTML:
@@ -56,6 +72,7 @@ def display_simulation_summary_html(result: SimulationResult) -> HTML:
         HTML: An IPython.display.HTML object containing the formatted summary.
 
     """
+    css_html = _inject_css()
     title = "Monte Carlo Simulation Summary"
     subtitle = f"Ran <strong>{result.num_simulations:,}</strong> simulations over <strong>{result.time_horizon_years}</strong> year(s)."  # noqa: E501
     stats = result.stats
@@ -80,7 +97,7 @@ def display_simulation_summary_html(result: SimulationResult) -> HTML:
         </div>
     </div>
     """
-    return HTML(get_summary_card_html(title, subtitle, body_html))
+    return HTML(css_html + get_summary_card_html(title, subtitle, body_html))
 
 
 def display_backtest_summary_html(metrics: dict) -> HTML:
@@ -93,6 +110,7 @@ def display_backtest_summary_html(metrics: dict) -> HTML:
         HTML: An IPython.display.HTML object containing the formatted summary table.
 
     """
+    css_html = _inject_css()
     strat_metrics = metrics.get("strategy", {})
     bench_metrics = metrics.get("benchmark", {})
 
@@ -161,4 +179,7 @@ def display_backtest_summary_html(metrics: dict) -> HTML:
         </tbody>
     </table>
     """
-    return HTML(get_summary_card_html("Backtest Performance", "Strategy vs. Benchmark", body_html))
+    return HTML(
+        css_html
+        + get_summary_card_html("Backtest Performance", "Strategy vs. Benchmark", body_html)
+    )
