@@ -34,6 +34,9 @@ class NegativeSharpeRatio(PortfolioObjective):
         self.lambda_reg = lambda_reg
 
     def __call__(self, weights: npt.NDArray[np.float64]) -> float:
+        if weights is None or np.sum(weights) == 0:
+            return np.inf
+
         portfolio_return = np.sum(weights * self.mean_returns)
         portfolio_volatility = np.sqrt(weights.T @ self.cov_matrix @ weights)
         log_risk_free_rate = np.log(1 + self.risk_free_rate)
