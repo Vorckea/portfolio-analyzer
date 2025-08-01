@@ -1,12 +1,11 @@
 from dataclasses import dataclass, field
-from typing import Tuple
 
 import pandas as pd
 
 
 @dataclass(frozen=True, slots=True)
 class AssetUniverse:
-    tickers: Tuple[str, ...] = field(metadata={"description": "Asset tickers"})
+    tickers: tuple[str, ...] = field(metadata={"description": "Asset tickers"})
 
     def __post_init__(self):
         if not self.tickers:

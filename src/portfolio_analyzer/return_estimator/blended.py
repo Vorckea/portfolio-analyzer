@@ -1,6 +1,5 @@
 import logging
 from collections.abc import Sequence
-from typing import Tuple
 
 import pandas as pd
 
@@ -18,7 +17,7 @@ class BlendedReturn(ReturnEstimator):
 
     def __init__(
         self,
-        weighted_estimators: Sequence[Tuple[ReturnEstimator, float]],
+        weighted_estimators: Sequence[tuple[ReturnEstimator, float]],
         logger: logging.Logger | None = None,
     ):
         self.logger = logger or logging.getLogger(__name__)

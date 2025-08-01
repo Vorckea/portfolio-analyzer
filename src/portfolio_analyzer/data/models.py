@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -49,7 +48,7 @@ class SimulationResult:
 
     """
 
-    stats: Dict[str, float]
+    stats: dict[str, float]
     final_values: np.ndarray
     simulation_paths: np.ndarray
     num_simulations: int

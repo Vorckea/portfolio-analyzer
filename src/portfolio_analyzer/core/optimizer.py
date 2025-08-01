@@ -8,15 +8,14 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
-from portfolio_analyzer.config.config import AppConfig
-from portfolio_analyzer.core.utils import (
+from ..config.config import AppConfig
+from ..core.utils import (
     portfolio_return,
     portfolio_volatility,
     sharpe_ratio,
 )
-from portfolio_analyzer.data.models import PortfolioResult
-from portfolio_analyzer.utils.exceptions import InputAlignmentError, OptimizationError
-
+from ..data.models import PortfolioResult
+from ..utils.exceptions import InputAlignmentError, OptimizationError
 from .objectives import PortfolioObjective
 
 

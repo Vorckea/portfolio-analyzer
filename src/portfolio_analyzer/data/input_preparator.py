@@ -7,13 +7,10 @@ final inputs (mean returns, covariance) for the optimizer.
 """
 
 import logging
-from typing import List
 
 from ..config.config import AppConfig
 from ..return_estimator.base import ReturnEstimator
 from ..utils.util import calculate_annualized_covariance, calculate_log_returns
-
-# from ..data.models import ModelInputs
 from .new_models import AssetUniverse, ModelInputs, PriceData, ReturnEstimates
 from .repository import Repository
 
@@ -26,7 +23,7 @@ def prepare_model_inputs(
     repository: Repository,
     start_date: str,
     end_date: str,
-    tickers: List[str],
+    tickers: list[str],
 ) -> ModelInputs:
     if tickers is None or not tickers:
         logger.error("No tickers provided for preparing model inputs.")

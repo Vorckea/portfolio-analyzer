@@ -1,6 +1,6 @@
 import logging
-from typing import Any, Dict, List, Tuple
 from collections import defaultdict
+from typing import Any
 
 import pandas as pd
 
@@ -17,12 +17,12 @@ class Repository:
     def __init__(self, data_fetcher: DataFetcher, logger: logging.Logger | None = None):
         self.data_fetcher = data_fetcher
         self.logger = logger or logging.getLogger(__name__)
-        self._price_cache: defaultdict[Tuple[str, ...], pd.DataFrame] = defaultdict(pd.DataFrame)
-        self._market_cap_cache: Dict[Tuple[str, ...], pd.Series] = {}
-        self._ticker_info_cache: Dict[str, Dict] = {}
-        self._cashflow_cache: Dict[str, pd.DataFrame] = {}
+        self._price_cache: defaultdict[tuple[str, ...], pd.DataFrame] = defaultdict(pd.DataFrame)
+        self._market_cap_cache: dict[tuple[str, ...], pd.Series] = {}
+        self._ticker_info_cache: dict[str, dict] = {}
+        self._cashflow_cache: dict[str, pd.DataFrame] = {}
 
-    def fetch_price_data(self, tickers: List[str], start_date: str, end_date: str) -> pd.DataFrame:
+    def fetch_price_data(self, tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
         self._validate_tickers(tickers)
         cache_key = (tuple(sorted(tickers)), start_date, end_date)
         if not self._price_cache[cache_key].empty:
@@ -40,7 +40,7 @@ class Repository:
         self.logger.warning(f"Fetched price data is empty or contains only NaNs for: {cache_key}")
         return data
 
-    def fetch_market_caps(self, tickers: List[str]) -> pd.Series:
+    def fetch_market_caps(self, tickers: list[str]) -> pd.Series:
         self._validate_tickers(tickers)
         cache_key = tuple(sorted(tickers))
         if cache_key in self._market_cap_cache:
@@ -56,7 +56,7 @@ class Repository:
         )
         return data
 
-    def fetch_ticker_info(self, ticker: str) -> Dict[str, Any]:
+    def fetch_ticker_info(self, ticker: str) -> dict[str, Any]:
         self._validate_ticker(ticker)
         if ticker in self._ticker_info_cache:
             self.logger.debug(f"Cache hit for ticker info: {ticker}")
@@ -82,7 +82,7 @@ class Repository:
         self.logger.warning(f"Fetched cashflow data is empty or contains only NaNs for: {ticker}")
         return data
 
-    def _validate_tickers(self, tickers: List[str]) -> None:
+    def _validate_tickers(self, tickers: list[str]) -> None:
         """Validate that tickers are provided and not empty."""
         if not tickers or not all(tickers):
             self.logger.error("No valid tickers provided.")

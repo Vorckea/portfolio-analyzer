@@ -3,7 +3,7 @@
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, ClassVar, Dict, List
+from typing import Any, ClassVar
 
 __all__ = [
     "DataRangeConfig",
@@ -163,7 +163,7 @@ class AppConfig:
     customization of the analysis parameters without modifying the core logic of the application.
     """
 
-    tickers: List[str] = field(
+    tickers: list[str] = field(
         default_factory=lambda: [
             "NORBT.OL",
             "SAAB-B.ST",
@@ -241,5 +241,5 @@ class AppConfig:
 
         return deepcopy(self) if deep else self.__class__(**self.__dict__)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
