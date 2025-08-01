@@ -6,6 +6,15 @@ import numpy as np
 class PortfolioObjective(ABC):
     @abstractmethod
     def __call__(self, weights: np.ndarray) -> float:
+        """Evaluate the objective function.
+
+        Args:
+            weights (np.ndarray): Portfolio weights.
+
+        Returns:
+            float: Objective function value for the given weights.
+
+        """
         pass
 
 
