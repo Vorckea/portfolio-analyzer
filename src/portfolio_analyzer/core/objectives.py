@@ -4,6 +4,8 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 
+from ..utils.exceptions import OptimizationError
+
 
 class PortfolioObjective(ABC):
     @abstractmethod
@@ -35,7 +37,7 @@ class NegativeSharpeRatio(PortfolioObjective):
 
     def __call__(self, weights: npt.NDArray[np.float64]) -> float:
         if weights is None or np.sum(weights) == 0:
-            return np.inf
+            raise OptimizationError("Weights cannot be None or sum to zero.")
 
         portfolio_return = np.sum(weights * self.mean_returns)
         portfolio_volatility = np.sqrt(weights.T @ self.cov_matrix @ weights)
@@ -55,4 +57,7 @@ class VolatilityObjective(PortfolioObjective):
         self.cov_matrix = np.asarray(cov_matrix, dtype=np.float64)
 
     def __call__(self, weights: npt.NDArray[np.float64]) -> float:
+        if weights is None or np.sum(weights) == 0:
+            raise OptimizationError("Weights cannot be None or sum to zero.")
+
         return np.sqrt(weights.T @ self.cov_matrix @ weights).item()

@@ -1,3 +1,5 @@
+import logging
+
 from IPython.display import display
 from matplotlib import pyplot as plt
 
@@ -37,6 +39,7 @@ class PortfolioAnalysisSession:
         config: AppConfig,
         optimizer: PortfolioOptimizer | None = None,
         mc_simulator: MonteCarloSimulator | None = None,
+        logger: logging.Logger | None = None,
     ):
         """Initialize the PortfolioAnalysisSession.
 
@@ -51,6 +54,7 @@ class PortfolioAnalysisSession:
         self.latest_result: PortfolioResult | None = None
         self.optimizer = optimizer
         self.mc_simulator = mc_simulator
+        self.logger = logger or logging.getLogger(__name__)
 
     def run_interactive_optimization(self):
         """Run optimization and displays results for interactive use.
@@ -63,7 +67,7 @@ class PortfolioAnalysisSession:
 
         """
         if not self.optimizer:
-            print("Optimizer not initialized due to data pipeline failure.")
+            self.logger.warning("Optimizer not initialized due to data pipeline failure.")
             return
 
         # Store the result within the session
@@ -73,7 +77,7 @@ class PortfolioAnalysisSession:
             display(display_optimization_summary_html(self.latest_result))
             plot_optimal_weights(self.latest_result, self.config.optimization.max_weight_per_asset)
         else:
-            print("Optimization failed. Could not generate a valid portfolio.")
+            self.logger.warning("Optimization failed. Could not generate a valid portfolio.")
 
     def run_interactive_monte_carlo(
         self, num_sim_interactive: int, time_horizon_interactive: float, df_t_interactive: int
@@ -90,7 +94,9 @@ class PortfolioAnalysisSession:
 
         """
         if not self.latest_result or not self.latest_result.success:
-            print("Optimization result not available. Please run the optimization widget first.")
+            self.logger.warning(
+                "Optimization result not available. Please run the optimization widget first."
+            )
             return
 
         try:
@@ -108,4 +114,4 @@ class PortfolioAnalysisSession:
             plt.show()
             plt.close(fig)
         except Exception as e:
-            print(f"An error occurred during simulation: {e}")
+            self.logger.error(f"An error occurred during simulation: {e}")

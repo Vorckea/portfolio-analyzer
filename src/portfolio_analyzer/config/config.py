@@ -150,6 +150,10 @@ class DCFConfig:
     max_beta: float = 3.5
 
 
+TRADING_DAYS_PER_YEAR = 252
+RISK_FREE_RATE = 0.04074
+
+
 @dataclass
 class AppConfig:
     """Application configuration for the portfolio analyzer.
@@ -190,8 +194,8 @@ class AppConfig:
     )
     use_dcf_views: bool = True
     date_range: DataRangeConfig = field(default_factory=DataRangeConfig)
-    trading_days_per_year: int = 252
-    risk_free_rate: float = 0.04074
+    trading_days_per_year: int = TRADING_DAYS_PER_YEAR
+    risk_free_rate: float = RISK_FREE_RATE
     ewma_span: int = 90
     mean_shrinkage_alpha: float = 0.2
     optimization: OptimizationConfig = field(default_factory=OptimizationConfig)

@@ -1,5 +1,4 @@
 import logging
-from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -10,6 +9,8 @@ from ..core.objectives import NegativeSharpeRatio, VolatilityObjective
 from ..core.utils import portfolio_return
 from ..data.models import PortfolioResult
 from ..utils.exceptions import OptimizationError
+
+OPTIMIZATION_METHOD = "SLSQP"
 
 
 class EfficientFrontierAnalyzer:
@@ -28,16 +29,15 @@ class EfficientFrontierAnalyzer:
 
     def calculate(
         self, num_points: int = 100
-    ) -> Tuple[pd.DataFrame, PortfolioResult, PortfolioResult]:
+    ) -> tuple[pd.DataFrame, PortfolioResult, PortfolioResult]:
         num_assets = len(self.tickers)
         bounds = tuple((0, 1.0) for _ in range(num_assets))
         initial_weights = np.array([1.0 / num_assets] * num_assets)
 
         min_vol_constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
-        min_vol_opt = minimize(
-            VolatilityObjective(self.cov_matrix.values),
-            initial_weights,
-            method="SLSQP",
+        min_vol_opt = self._optimize_portfolio(
+            objective=VolatilityObjective(self.cov_matrix.values),
+            initial_weights=initial_weights,
             bounds=bounds,
             constraints=min_vol_constraints,
         )
@@ -46,15 +46,14 @@ class EfficientFrontierAnalyzer:
             raise OptimizationError("Could not find the minimum volatility portfolio.")
         min_vol_result = self._create_result_from_weights(min_vol_opt.x)
 
-        max_sharpe_opt = minimize(
-            NegativeSharpeRatio(
+        max_sharpe_opt = self._optimize_portfolio(
+            objective=NegativeSharpeRatio(
                 self.mean_returns.values,
                 self.cov_matrix.values,
                 self.config.risk_free_rate,
                 0.0,
             ),
-            initial_weights,
-            method="SLSQP",
+            initial_weights=initial_weights,
             bounds=bounds,
             constraints={"type": "eq", "fun": lambda w: np.sum(w) - 1},
         )
@@ -67,7 +66,7 @@ class EfficientFrontierAnalyzer:
         max_return_log = max(max_sharpe_result.log_return, self.mean_returns.max())
         target_log_returns = np.linspace(min_return_log, max_return_log, num_points)
 
-        frontier_portfolios: List[dict] = []
+        frontier_portfolios: list[dict] = []
         for target_return in target_log_returns:
             constraints = [
                 {"type": "eq", "fun": lambda w: np.sum(w) - 1},
@@ -76,13 +75,14 @@ class EfficientFrontierAnalyzer:
                     "fun": lambda w: portfolio_return(w, self.mean_returns.values) - target_return,
                 },
             ]
-            opt = minimize(
-                VolatilityObjective(self.cov_matrix.values),
-                initial_weights,
-                method="SLSQP",
+
+            opt = self._optimize_portfolio(
+                objective=VolatilityObjective(self.cov_matrix.values),
+                initial_weights=initial_weights,
                 bounds=bounds,
                 constraints=constraints,
             )
+
             if opt.success:
                 frontier_portfolios.append({"Return": target_return, "Volatility": opt.fun})
 
@@ -103,3 +103,13 @@ class EfficientFrontierAnalyzer:
         return PortfolioOptimizer(
             self.mean_returns, self.cov_matrix, self.config, None
         )._create_result_from_weights(weights)
+
+    @staticmethod
+    def _optimize_portfolio(objective, initial_weights, bounds, constraints):
+        return minimize(
+            objective,
+            initial_weights,
+            method=OPTIMIZATION_METHOD,
+            bounds=bounds,
+            constraints=constraints,
+        )
