@@ -16,13 +16,20 @@ __all__ = [
     "AppConfig",
 ]
 
+DEFAULT_START_DATE = datetime.today() - timedelta(days=5 * 365)
+DEFAULT_END_DATE = datetime.today()
+
 
 @dataclass
 class DataRangeConfig:
-    """Date range for fetchinghistorical data."""
+    """Date range for fetching historical data."""
 
-    end: datetime = field(default_factory=lambda: datetime.today())
-    start: datetime = field(default_factory=lambda: datetime.today() - timedelta(days=5 * 365))
+    end: datetime = field(default_factory=lambda: DEFAULT_END_DATE)
+    start: datetime = field(default_factory=lambda: DEFAULT_START_DATE)
+
+
+DEFAULT_MAX_WEIGHT_PER_ASSET = 0.25
+DEFAULT_MIN_WEIGHT_PER_ASSET = 1e-4
 
 
 @dataclass
@@ -30,8 +37,8 @@ class OptimizationConfig:
     """Portfolio optimization parameters."""
 
     lambda_reg: float = 1.0
-    max_weight_per_asset: float = 0.25
-    min_weight_per_asset: float = 1e-4
+    max_weight_per_asset: float = DEFAULT_MAX_WEIGHT_PER_ASSET
+    min_weight_per_asset: float = DEFAULT_MIN_WEIGHT_PER_ASSET
 
 
 @dataclass
@@ -152,6 +159,8 @@ class DCFConfig:
 
 TRADING_DAYS_PER_YEAR = 252
 RISK_FREE_RATE = 0.04074
+DEFAULT_EWMA_SPAN = 90
+DEFAULT_MEAN_SHRINKAGE_ALPHA = 0.2
 
 
 @dataclass
@@ -196,8 +205,8 @@ class AppConfig:
     date_range: DataRangeConfig = field(default_factory=DataRangeConfig)
     trading_days_per_year: int = TRADING_DAYS_PER_YEAR
     risk_free_rate: float = RISK_FREE_RATE
-    ewma_span: int = 90
-    mean_shrinkage_alpha: float = 0.2
+    ewma_span: int = DEFAULT_EWMA_SPAN
+    mean_shrinkage_alpha: float = DEFAULT_MEAN_SHRINKAGE_ALPHA
     optimization: OptimizationConfig = field(default_factory=OptimizationConfig)
     black_litterman: BlackLittermanConfig = field(default_factory=BlackLittermanConfig)
     monte_carlo: MonteCarloConfig = field(default_factory=MonteCarloConfig)
