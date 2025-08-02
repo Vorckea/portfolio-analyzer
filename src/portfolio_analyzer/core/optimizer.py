@@ -18,6 +18,8 @@ from ..data.models import PortfolioResult
 from ..utils.exceptions import InputAlignmentError, OptimizationError
 from .objectives import PortfolioObjective
 
+OPTIMIZATION_METHOD = "SLSQP"
+
 
 class PortfolioOptimizer:
     """Performs mean-variance portfolio optimization."""
@@ -56,18 +58,13 @@ class PortfolioOptimizer:
         self.objective = objective
 
     def optimize(self) -> PortfolioResult | None:
-        """Perform portfolio optimization to find the tangency portfolio.
+        """Perform the portfolio optimization.
 
-        This method seeks to maximize the Sharpe ratio, potentially with L2
-        regularization to control overfitting and encourage diversification.
-
-        Args:
-            lambda_reg (float): The L2 regularization coefficient. Higher values
-                result in more diversified, less concentrated portfolios.
+        This method uses the specified objective function to optimize the portfolio weights
+        based on the mean returns and covariance matrix provided during initialization.
 
         Returns:
-            Optional[PortfolioResult]: A data object containing the results of the
-                optimization, or None if it fails.
+            PortfolioResult | None: The result of the optimization or None if it fails.
 
         """
         return self._perform_core_optimization()
@@ -77,14 +74,17 @@ class PortfolioOptimizer:
         if num_asset == 0:
             raise OptimizationError("No assets to optimize.")
 
-        constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
+        constraints = {
+            "type": "eq",
+            "fun": lambda w: np.sum(w) - 1,
+        }
         bounds = tuple((0, self.config.optimization.max_weight_per_asset) for _ in range(num_asset))
         initial_weights = np.array([1.0 / num_asset] * num_asset)
 
         opt_result = minimize(
             self.objective,
             initial_weights,
-            method="SLSQP",
+            method=OPTIMIZATION_METHOD,
             bounds=bounds,
             constraints=constraints,
         )
