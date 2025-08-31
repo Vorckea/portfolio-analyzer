@@ -6,6 +6,7 @@ from typing import Any, Hashable, TypeVar
 
 import pandas as pd
 
+from .cache import CacheStore
 from .data_fetcher import DataFetcher
 
 T = TypeVar("T")
@@ -18,57 +19,6 @@ class Repository:
     Only complete and valid data is cached; failed or incomplete requests are not cached.
     """
 
-    class _CacheStore:
-        def __init__(
-            self,
-            name: str,
-            logger: logging.Logger,
-            validator: Callable[[Any], bool],
-            copier: Callable[[Any], Any],
-        ):
-            self.name = name
-            self.logger = logger
-            self._validator = validator
-            self._copier = copier
-            self._cache: dict[Hashable, Any] = {}
-            self._locks: dict[Hashable, threading.Lock] = {}
-
-        def get_or_fetch(self, key: Hashable, fetch_fn: Callable[[], T]) -> T:
-            # fast path
-            if key in self._cache:
-                self.logger.debug("Cache hit for %s (key=%s)", self.name, key)
-                return self._copier(self._cache[key])
-
-            self.logger.info("Cache miss for %s. Fetching (key=%s)...", self.name, key)
-
-            lock = self._locks.setdefault(key, threading.Lock())
-            with lock:
-                # re-check after acquiring lock
-                if key in self._cache:
-                    self.logger.debug(
-                        "Cache filled while waiting for lock for %s (key=%s)", self.name, key
-                    )
-                    return self._copier(self._cache[key])
-
-                try:
-                    data = fetch_fn()
-                except Exception as exc:
-                    self.logger.exception(
-                        "Error fetching %s (key=%s): %s", self.name, key, exc, exc_info=True
-                    )
-                    raise
-
-                if not self._validator(data):
-                    msg = f"Fetched {self.name!r} is empty or invalid for key={key!r}"
-                    self.logger.error(msg)
-                    raise RuntimeError(msg)
-
-                # store a shallow copy to reduce accidental external mutation
-                stored = self._copier(data)
-                self._cache[key] = stored
-                self.logger.debug("Cached %s (key=%s)", self.name, key)
-                return self._copier(stored)
-
     def __init__(self, data_fetcher: DataFetcher, logger: logging.Logger | None = None):
         self.data_fetcher = data_fetcher
         self.logger = logger or logging.getLogger(__name__)
@@ -76,22 +26,21 @@ class Repository:
         self._ticker_info_cache: dict[str, dict] = {}
 
         # instantiate CacheStore helpers
-        self._price_store = Repository._CacheStore(
+        self._price_store = CacheStore(
             name="price data",
             logger=self.logger,
             validator=self._is_valid_data,
             copier=self._safe_copy,
         )
-        self._market_cap_store = Repository._CacheStore(
+        self._market_cap_store = CacheStore(
             name="market caps",
             logger=self.logger,
             validator=self._is_valid_data,
             copier=self._safe_copy,
         )
-        self._cashflow_store = Repository._CacheStore(
+        self._cashflow_store = CacheStore(
             name="cashflow",
             logger=self.logger,
-            validator=None,
             copier=copy.deepcopy,
         )
 
