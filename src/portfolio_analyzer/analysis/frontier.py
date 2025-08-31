@@ -50,30 +50,74 @@ class EfficientFrontierAnalyzer:
 
         min_return_log = min_vol_result.log_return
         max_return_log = max(max_sharpe_result.log_return, self.mean_returns.max())
-        target_log_returns = np.linspace(min_return_log, max_return_log, num_points)
+
+        if max_return_log <= min_return_log:
+            # degenerate case: frontier collapses to a single point
+            self.logger.warning(
+                "Max return <= min return (max=%s, min=%s). Returning single-point frontier.",
+                max_return_log,
+                min_return_log,
+            )
+            frontier_df = pd.DataFrame(
+                [{"Return": min_return_log, "Volatility": min_vol_result.volatility}],
+                columns=["Return", "Volatility"],
+            )
+            return frontier_df, max_sharpe_result, min_vol_result
+
+        frontier_df = self._build_frontier_points(
+            min_return=min_return_log,
+            max_return=max_return_log,
+            num_points=num_points,
+            bounds=bounds,
+            initial_weights=initial_weights,
+        )
+
+        if frontier_df.empty:
+            raise OptimizationError(
+                "Efficient frontier calculation failed: no valid frontier points found."
+            )
+
+        return frontier_df, max_sharpe_result, min_vol_result
+
+    def _build_frontier_points(
+        self,
+        min_return: float,
+        max_return: float,
+        num_points: int,
+        bounds,
+        initial_weights,
+    ) -> pd.DataFrame:
+        target_log_returns = np.linspace(min_return, max_return, num_points)
 
         frontier_portfolios: list[dict] = []
+        # objective uses covariance matrix values directly for the volatility minimization
+        objective = VolatilityObjective(self.cov_matrix.values)
+
         for target in target_log_returns:
             constraints = (self._sum_to_one_constraint(), self._return_target_constraint(target))
             opt = self._optimize_portfolio(
-                objective=VolatilityObjective(self.cov_matrix.values),
+                objective=objective,
                 initial_weights=initial_weights,
                 bounds=bounds,
                 constraints=constraints,
             )
 
-            if opt.success:
+            if opt is not None and getattr(opt, "success", False):
                 frontier_portfolios.append({"Return": target, "Volatility": opt.fun})
             else:
+                # Log debug message for failed point (keeps frontier generation robust)
                 self.logger.debug(
-                    f"Skipping failed frontier point for target {target}: {opt.message}"
+                    "Skipping failed frontier point for target %s: %s",
+                    target,
+                    getattr(opt, "message", None),
                 )
 
         if not frontier_portfolios:
-            raise OptimizationError("Could not calculate any points for the efficient frontier.")
+            self.logger.error("No successful frontier points were generated.")
+            return pd.DataFrame(columns=["Return", "Volatility"])
 
         frontier_df = pd.DataFrame(frontier_portfolios)
-        return frontier_df, max_sharpe_result, min_vol_result
+        return frontier_df
 
     def _find_minimum_volatility(self, bounds, initial_weights) -> PortfolioResult:
         constraints = self._sum_to_one_constraint()
