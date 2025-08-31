@@ -57,29 +57,29 @@ class Repository:
     def _get_cached(
         self, cache: dict, cache_key: Hashable, fetch_fn: Callable[..., T], cache_name: str
     ) -> T:
+        # cache hit
         if cache_key in cache:
             self.logger.debug("Cache hit for %s (key=%s)", cache_name, cache_key)
             return self._safe_copy(cache[cache_key])
 
+        # cache miss -> fetch
         self.logger.info("Cache miss for %s. Fetching (key=%s)...", cache_name, cache_key)
-        result = fetch_fn()
-
-        if not self._is_valid_data(result):
-            self.logger.error("Fetched %s is invalid or empty (key=%s).", cache_name, cache_key)
-            raise RuntimeError(f"Fetched {cache_name} is invalid or empty for key {cache_key}")
-
         try:
-            cache_value = self._safe_copy(result)
-            cache[cache_key] = cache_value
-            self.logger.debug("Cached %s (key=%s).", cache_name, cache_key)
-        except Exception:
-            # as a fallback, store the original result
-            cache[cache_key] = result
-            self.logger.debug(
-                "Cached original %s after copy failure (key=%s).", cache_name, cache_key
-            )
+            data = fetch_fn()
+        except Exception as exc:
+            self.logger.exception("Error fetching %s (key=%s): %s", cache_name, cache_key, exc)
+            raise
 
-        return self._safe_copy(cache[cache_key])
+        # valiate
+        if not self._is_valid_data(data):
+            msg = f"Fetched {cache_name!r} is empty or invalid for key={cache_key!r}"
+            self.logger.error(msg)
+            raise RuntimeError(msg)
+
+        cached = self._safe_copy(data)
+        cache[cache_key] = cached
+        self.logger.debug("Cached %s (key=%s)", cache_name, cache_key)
+        return self._safe_copy(cached)
 
     def fetch_price_data(self, tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
         self._validate_tickers(tickers)
