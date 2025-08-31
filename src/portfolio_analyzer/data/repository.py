@@ -1,4 +1,6 @@
+import copy
 import logging
+import threading
 from collections.abc import Callable
 from typing import Any, Hashable, TypeVar
 
@@ -23,6 +25,7 @@ class Repository:
         self._market_cap_cache: dict[tuple[str, ...], pd.Series] = {}
         self._ticker_info_cache: dict[str, dict] = {}
         self._cashflow_cache: dict[str, pd.DataFrame] = {}
+        self._locks = dict[Hashable, threading.Lock] = {}
 
     def _make_ticker_key(self, tickers: list[str]) -> tuple[str, ...]:
         return tuple(sorted(tickers))
@@ -42,17 +45,17 @@ class Repository:
                 return False
             return not data.isnull().all()
 
-        return True
+        try:
+            return bool(len(data))
+        except Exception:
+            return True
 
     def _safe_copy(self, obj: Any) -> Any:
         """Return a shallow copy if possible, otherwise return the original object."""
         try:
-            copy_fn = getattr(obj, "copy", None)
-            if callable(copy_fn):
-                return copy_fn()
+            return copy.copy(obj)
         except Exception:
-            self.logger.debug("Shallow copy failed; returning original object.", exc_info=True)
-        return obj
+            return obj
 
     def _get_cached(
         self, cache: dict, cache_key: Hashable, fetch_fn: Callable[..., T], cache_name: str
@@ -64,22 +67,32 @@ class Repository:
 
         # cache miss -> fetch
         self.logger.info("Cache miss for %s. Fetching (key=%s)...", cache_name, cache_key)
-        try:
-            data = fetch_fn()
-        except Exception as exc:
-            self.logger.exception("Error fetching %s (key=%s): %s", cache_name, cache_key, exc)
-            raise
 
-        # valiate
-        if not self._is_valid_data(data):
-            msg = f"Fetched {cache_name!r} is empty or invalid for key={cache_key!r}"
-            self.logger.error(msg)
-            raise RuntimeError(msg)
+        lock = self._locks.setdefault(cache_key, threading.Lock())
 
-        cached = self._safe_copy(data)
-        cache[cache_key] = cached
-        self.logger.debug("Cached %s (key=%s)", cache_name, cache_key)
-        return self._safe_copy(cached)
+        with lock:
+            if cache_key in cache:
+                self.logger.debug(
+                    "Cache filled while waiting for lock for %s (key=%s)", cache_name, cache_key
+                )
+                return self._safe_copy(cache[cache_key])
+            try:
+                data = fetch_fn()
+            except Exception as exc:
+                self.logger.exception(
+                    "Error fetching %s (key=%s): %s", cache_name, cache_key, exc, exc_info=True
+                )
+                raise
+
+            if not self._is_valid_data(data):
+                msg = f"Fetched {cache_name!r} is empty or invalid for key={cache_key!r}"
+                self.logger.error(msg)
+                raise RuntimeError(msg)
+
+            cached = self._safe_copy(data)
+            cache[cache_key] = cached
+            self.logger.debug("Cached %s (key=%s)", cache_name, cache_key)
+            return cached
 
     def fetch_price_data(self, tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
         self._validate_tickers(tickers)
