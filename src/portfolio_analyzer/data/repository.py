@@ -1,5 +1,4 @@
 import logging
-from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
 
@@ -27,17 +26,23 @@ class Repository:
         return tuple(sorted(tickers))
 
     def _is_valid_data(self, data: Any) -> bool:
+        """Return True if data is a non-empty DataFrame/Series and not all NaNs."""
         if data is None:
             return False
-        if isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
-            return (
-                not data.empty and not data.isnull().all().all()
-                if isinstance(data, pd.DataFrame)
-                else not data.isnull().all()
-            )
+        if isinstance(data, pd.DataFrame):
+            return not data.empty and not data.isnull().all().all()
+        if isinstance(data, pd.Series):
+            return not data.empty and not data.isnull().all()
         return False
 
-    def _fetch_with_cahce(
+    def _safe_copy(self, obj: Any) -> Any:
+        """Return a shallow copy if possible, otherwise return the original object."""
+        try:
+            return obj.copy()
+        except Exception:
+            return obj
+
+    def _fetch_with_cache(
         self,
         cache: dict,
         cache_key: Any,
@@ -46,28 +51,22 @@ class Repository:
     ) -> Any:
         if cache_key in cache:
             self.logger.debug(f"Cache hit for {cache_name}: {cache_key}")
-            val = cache[cache_key]
-            try:
-                return val.copy()
-            except Exception:
-                return val
+            return self._safe_copy(cache[cache_key])
+
         self.logger.debug(f"Cache miss for {cache_name}: {cache_key}. Fetching from data source.")
         data = fetch_fn()
+
         if self._is_valid_data(data):
-            try:
-                cache[cache_key] = data.copy()
-            except Exception:
-                cache[cache_key] = data
-            return (
-                cache[cache_key].copy() if hasattr(cache[cache_key], "copy") else cache[cache_key]
-            )
+            cache[cache_key] = self._safe_copy(data)
+            return self._safe_copy(cache[cache_key])
+
         self.logger.warning(f"Fetched {cache_name} is empty or contains only NaNs for: {cache_key}")
         return data
 
     def fetch_price_data(self, tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
         self._validate_tickers(tickers)
         cache_key = (self._make_ticker_key(tickers), start_date, end_date)
-        return self._fetch_with_cahce(
+        return self._fetch_with_cache(
             cache=self._price_cache,
             cache_key=cache_key,
             fetch_fn=lambda: self.data_fetcher.fetch_price_data(
@@ -81,7 +80,7 @@ class Repository:
     def fetch_market_caps(self, tickers: list[str]) -> pd.Series:
         self._validate_tickers(tickers)
         cache_key = self._make_ticker_key(tickers)
-        return self._fetch_with_cahce(
+        return self._fetch_with_cache(
             cache=self._market_cap_cache,
             cache_key=cache_key,
             fetch_fn=lambda: self.data_fetcher.fetch_market_caps(tickers),
