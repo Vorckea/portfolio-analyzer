@@ -73,12 +73,7 @@ class Repository:
         self.data_fetcher = data_fetcher
         self.logger = logger or logging.getLogger(__name__)
         # in-memory caches
-        self._price_cache: dict[tuple[str, ...], pd.DataFrame] = {}
-        self._market_cap_cache: dict[tuple[str, ...], pd.Series] = {}
         self._ticker_info_cache: dict[str, dict] = {}
-        self._cashflow_cache: dict[str, pd.DataFrame] = {}
-        # remove the old flat _locks; each CacheStore manages its own locks
-        # self._locks = dict[Hashable, threading.Lock] = {}
 
         # instantiate CacheStore helpers
         self._price_store = Repository._CacheStore(
@@ -92,6 +87,12 @@ class Repository:
             logger=self.logger,
             validator=self._is_valid_data,
             copier=self._safe_copy,
+        )
+        self._cashflow_store = Repository._CacheStore(
+            name="cashflow",
+            logger=self.logger,
+            validator=None,
+            copier=copy.deepcopy,
         )
 
     def _make_ticker_key(self, tickers: list[str]) -> tuple[str, ...]:
@@ -186,23 +187,11 @@ class Repository:
 
     def fetch_cashflow(self, ticker: str) -> pd.DataFrame | None:
         self._validate_ticker(ticker)
-        if (ticker in self._cashflow_cache) and self._is_valid_data(self._cashflow_cache[ticker]):
-            self.logger.debug(f"Cache hit for cashflow: {ticker}")
-            return self._cashflow_cache[ticker].copy()
-        self.logger.debug(f"Cache miss for cashflow: {ticker}. Fetching from data source.")
-        data = self.data_fetcher.fetch_cashflow(ticker)
-        if self._is_valid_data(data):
-            try:
-                self._cashflow_cache[ticker] = data.copy()
-            except Exception:
-                self._cashflow_cache[ticker] = data
-            return (
-                self._cashflow_cache[ticker].copy()
-                if hasattr(self._cashflow_cache[ticker], "copy")
-                else self._cashflow_cache[ticker]
-            )
-        self.logger.warning(f"Fetched cashflow is empty for: {ticker}")
-        return data
+        cache_key = ticker
+        return self._cashflow_store.get_or_fetch(
+            cache_key,
+            lambda: self.data_fetcher.fetch_cashflow(ticker),
+        )
 
     def _validate_tickers(self, tickers: list[str]) -> None:
         """Validate that tickers are provided and not empty."""
