@@ -95,14 +95,31 @@ class PortfolioOptimizer:
         return self._create_result_from_weights(opt_result.x)
 
     def _create_result_from_weights(self, weights: np.ndarray) -> PortfolioResult:
-        final_weights = pd.Series(weights, index=self.tickers)
-        final_weights = final_weights[final_weights > self.config.optimization.min_weight_per_asset]
+        # Delegate to the public static factory to avoid duplicating logic.
+        return PortfolioOptimizer.create_result_from_weights(
+            self.mean_returns, self.cov_matrix, self.config, weights
+        )
+
+    @staticmethod
+    def create_result_from_weights(
+        mean_returns: pd.Series,
+        cov_matrix: pd.DataFrame,
+        config: AppConfig,
+        weights: np.ndarray,
+    ) -> PortfolioResult:
+        """Create a PortfolioResult from raw weight vector without requiring an optimizer instance.
+
+        This extracts and normalizes non-trivial weights, computes portfolio metrics,
+        and returns a populated PortfolioResult (or a failure result when weights collapse).
+        """
+        final_weights = pd.Series(weights, index=mean_returns.index)
+        final_weights = final_weights[final_weights > config.optimization.min_weight_per_asset]
         if final_weights.empty:
             return PortfolioResult.failure()
 
         final_weights /= final_weights.sum()
-        mean_returns_filtered = self.mean_returns.loc[final_weights.index]
-        cov_matrix_filtered = self.cov_matrix.loc[final_weights.index, final_weights.index]
+        mean_returns_filtered = mean_returns.loc[final_weights.index]
+        cov_matrix_filtered = cov_matrix.loc[final_weights.index, final_weights.index]
 
         log_return = portfolio_return(final_weights.values, mean_returns_filtered.values)
         std_dev = portfolio_volatility(final_weights.values, cov_matrix_filtered.values)
@@ -110,11 +127,11 @@ class PortfolioOptimizer:
             final_weights.values,
             mean_returns_filtered.values,
             cov_matrix_filtered.values,
-            self.config.risk_free_rate,
+            config.risk_free_rate,
         )
         arithmetic_return = np.exp(log_return) - 1
         display_sharpe = (
-            (arithmetic_return - self.config.risk_free_rate) / std_dev if std_dev != 0 else 0
+            (arithmetic_return - config.risk_free_rate) / std_dev if std_dev != 0 else 0
         )
 
         return PortfolioResult(

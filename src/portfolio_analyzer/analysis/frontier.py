@@ -158,11 +158,13 @@ class EfficientFrontierAnalyzer:
         return {"type": "eq", "fun": _fun}
 
     def _create_result_from_weights(self, weights: np.ndarray) -> PortfolioResult:
+        # Use the public factory method to build a PortfolioResult without creating
+        # a PortfolioOptimizer instance with a dummy objective.
         from portfolio_analyzer.core.optimizer import PortfolioOptimizer
 
-        return PortfolioOptimizer(
-            self.mean_returns, self.cov_matrix, self.config, None
-        )._create_result_from_weights(weights)
+        return PortfolioOptimizer.create_result_from_weights(
+            self.mean_returns, self.cov_matrix, self.config, weights
+        )
 
     @staticmethod
     def _optimize_portfolio(objective, initial_weights, bounds, constraints):

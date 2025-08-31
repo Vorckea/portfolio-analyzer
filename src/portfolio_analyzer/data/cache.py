@@ -20,7 +20,7 @@ class CacheStore:
         self._validator = validator
         self._copier = copier
         self._cache: dict[Hashable, T] = {}
-        self._lock: dict[Hashable, threading.Lock] = {}
+        self._locks: dict[Hashable, threading.Lock] = {}
 
     def get_or_fetch(self, key: Hashable, fetch_fn: Callable[[], T]) -> T:
         # fast path
