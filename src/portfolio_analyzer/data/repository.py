@@ -1,10 +1,12 @@
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeVar, Hashable
 
 import pandas as pd
 
 from .data_fetcher import DataFetcher
+
+T = TypeVar("T")
 
 
 class Repository:
@@ -29,44 +31,60 @@ class Repository:
         """Return True if data is a non-empty DataFrame/Series and not all NaNs."""
         if data is None:
             return False
+
         if isinstance(data, pd.DataFrame):
-            return not data.empty and not data.isnull().all().all()
+            if data.empty:
+                return False
+            return not data.isnull().all().all()
+
         if isinstance(data, pd.Series):
-            return not data.empty and not data.isnull().all()
-        return False
+            if data.empty:
+                return False
+            return not data.isnull().all()
+
+        return True
 
     def _safe_copy(self, obj: Any) -> Any:
         """Return a shallow copy if possible, otherwise return the original object."""
         try:
-            return obj.copy()
+            copy_fn = getattr(obj, "copy", None)
+            if callable(copy_fn):
+                return copy_fn()
         except Exception:
-            return obj
+            self.logger.debug("Shallow copy failed; returning original object.", exc_info=True)
+        return obj
 
-    def _fetch_with_cache(
-        self,
-        cache: dict,
-        cache_key: Any,
-        fetch_fn: Callable[..., Any],
-        cache_name: str,
-    ) -> Any:
+    def _get_cached(
+        self, cache: dict, cache_key: Hashable, fetch_fn: Callable[..., T], cache_name: str
+    ) -> T:
         if cache_key in cache:
-            self.logger.debug(f"Cache hit for {cache_name}: {cache_key}")
+            self.logger.debug("Cache hit for %s (key=%s)", cache_name, cache_key)
             return self._safe_copy(cache[cache_key])
 
-        self.logger.debug(f"Cache miss for {cache_name}: {cache_key}. Fetching from data source.")
-        data = fetch_fn()
+        self.logger.info("Cache miss for %s. Fetching (key=%s)...", cache_name, cache_key)
+        result = fetch_fn()
 
-        if self._is_valid_data(data):
-            cache[cache_key] = self._safe_copy(data)
-            return self._safe_copy(cache[cache_key])
+        if not self._is_valid_data(result):
+            self.logger.error("Fetched %s is invalid or empty (key=%s).", cache_name, cache_key)
+            raise RuntimeError(f"Fetched {cache_name} is invalid or empty for key {cache_key}")
 
-        self.logger.warning(f"Fetched {cache_name} is empty or contains only NaNs for: {cache_key}")
-        return data
+        try:
+            cache_value = self._safe_copy(result)
+            cache[cache_key] = cache_value
+            self.logger.debug("Cached %s (key=%s).", cache_name, cache_key)
+        except Exception:
+            # as a fallback, store the original result
+            cache[cache_key] = result
+            self.logger.debug(
+                "Cached original %s after copy failure (key=%s).", cache_name, cache_key
+            )
+
+        return self._safe_copy(cache[cache_key])
 
     def fetch_price_data(self, tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
         self._validate_tickers(tickers)
         cache_key = (self._make_ticker_key(tickers), start_date, end_date)
-        return self._fetch_with_cache(
+        return self._get_cached(
             cache=self._price_cache,
             cache_key=cache_key,
             fetch_fn=lambda: self.data_fetcher.fetch_price_data(
@@ -80,7 +98,7 @@ class Repository:
     def fetch_market_caps(self, tickers: list[str]) -> pd.Series:
         self._validate_tickers(tickers)
         cache_key = self._make_ticker_key(tickers)
-        return self._fetch_with_cache(
+        return self._get_cached(
             cache=self._market_cap_cache,
             cache_key=cache_key,
             fetch_fn=lambda: self.data_fetcher.fetch_market_caps(tickers),
