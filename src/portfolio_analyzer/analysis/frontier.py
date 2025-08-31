@@ -34,32 +34,18 @@ class EfficientFrontierAnalyzer:
         bounds = tuple((0, 1.0) for _ in range(num_assets))
         initial_weights = np.array([1.0 / num_assets] * num_assets)
 
-        min_vol_constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
-        min_vol_opt = self._optimize_portfolio(
-            objective=VolatilityObjective(self.cov_matrix.values),
-            initial_weights=initial_weights,
-            bounds=bounds,
-            constraints=min_vol_constraints,
-        )
-        if not min_vol_opt.success:
-            self.logger.error(f"Minimum volatility optimization failed: {min_vol_opt.message}")
-            raise OptimizationError("Could not find the minimum volatility portfolio.")
-        min_vol_result = self._create_result_from_weights(min_vol_opt.x)
+        # find minimum volatility portfolio
+        min_vol_result = self._find_minimum_volatility(bounds, initial_weights)
+        # find maximum Sharpe ratio portfolio
+        max_sharpe_result = self._find_max_sharpe(bounds, initial_weights)
 
-        max_sharpe_opt = self._optimize_portfolio(
-            objective=NegativeSharpeRatio(
-                self.mean_returns.values,
-                self.cov_matrix.values,
-                self.config.risk_free_rate,
-                0.0,
-            ),
-            initial_weights=initial_weights,
-            bounds=bounds,
-            constraints={"type": "eq", "fun": lambda w: np.sum(w) - 1},
-        )
-        max_sharpe_result = self._create_result_from_weights(max_sharpe_opt.x)
+        # sanity checks
+        if not min_vol_result:
+            raise OptimizationError("Could not find the minimum volatility portfolio.")
         if not max_sharpe_result or not max_sharpe_result.success:
-            self.logger.error(f"Maximum Sharpe ratio optimization failed: {max_sharpe_opt.message}")
+            self.logger.error(
+                f"Maximum Sharpe ratio optimization failed: {getattr(max_sharpe_result, 'message', None)}"
+            )
             raise OptimizationError("Could not find the maximum Sharpe ratio portfolio.")
 
         min_return_log = min_vol_result.log_return
@@ -67,15 +53,8 @@ class EfficientFrontierAnalyzer:
         target_log_returns = np.linspace(min_return_log, max_return_log, num_points)
 
         frontier_portfolios: list[dict] = []
-        for target_return in target_log_returns:
-            constraints = [
-                {"type": "eq", "fun": lambda w: np.sum(w) - 1},
-                {
-                    "type": "eq",
-                    "fun": lambda w: portfolio_return(w, self.mean_returns.values) - target_return,
-                },
-            ]
-
+        for target in target_log_returns:
+            constraints = (self._sum_to_one_constraint(), self._return_target_constraint(target))
             opt = self._optimize_portfolio(
                 objective=VolatilityObjective(self.cov_matrix.values),
                 initial_weights=initial_weights,
@@ -84,18 +63,55 @@ class EfficientFrontierAnalyzer:
             )
 
             if opt.success:
-                frontier_portfolios.append({"Return": target_return, "Volatility": opt.fun})
+                frontier_portfolios.append({"Return": target, "Volatility": opt.fun})
+            else:
+                self.logger.debug(
+                    f"Skipping failed frontier point for target {target}: {opt.message}"
+                )
 
         if not frontier_portfolios:
             raise OptimizationError("Could not calculate any points for the efficient frontier.")
 
         frontier_df = pd.DataFrame(frontier_portfolios)
-        log_risk_free_rate = np.log(1 + self.config.risk_free_rate)
-        frontier_df["Sharpe"] = (frontier_df["Return"] - log_risk_free_rate) / frontier_df[
-            "Volatility"
-        ]
-
         return frontier_df, max_sharpe_result, min_vol_result
+
+    def _find_minimum_volatility(self, bounds, initial_weights) -> PortfolioResult:
+        constraints = self._sum_to_one_constraint()
+        opt = self._optimize_portfolio(
+            objective=VolatilityObjective(self.cov_matrix.values),
+            initial_weights=initial_weights,
+            bounds=bounds,
+            constraints=constraints,
+        )
+        if not opt.success:
+            self.logger.error(f"Minimum volatility optimization failed: {opt.message}")
+            return None
+        return self._create_result_from_weights(opt.x)
+
+    def _find_max_sharpe(self, bounds, initial_weights) -> PortfolioResult:
+        constraints = self._sum_to_one_constraint()
+        opt = self._optimize_portfolio(
+            objective=NegativeSharpeRatio(
+                self.mean_returns.values,
+                self.cov_matrix.values,
+                self.config.risk_free_rate,
+                0.0,
+            ),
+            initial_weights=initial_weights,
+            bounds=bounds,
+            constraints=constraints,
+        )
+        return self._create_result_from_weights(opt.x) if opt.success else opt
+
+    def _sum_to_one_constraint(self):
+        return {"type": "eq", "fun": lambda w: np.sum(w) - 1}
+
+    def _return_target_constraint(self, target_return: float):
+        # bind target_return at creation time to avoid late-binding closure issues
+        def _fun(w, tr=target_return):
+            return portfolio_return(w, self.mean_returns.values) - tr
+
+        return {"type": "eq", "fun": _fun}
 
     def _create_result_from_weights(self, weights: np.ndarray) -> PortfolioResult:
         from portfolio_analyzer.core.optimizer import PortfolioOptimizer

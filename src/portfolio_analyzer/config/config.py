@@ -196,9 +196,11 @@ class AppConfig:
             "ORNBV.HE",
             "MAERSK-B.CO",
             "BOL.ST",
+            "VALMT.HE",
             "0P00000MVB.IR",
             "0P0001IMY8.F",
             "0P00000B0I",
+            "VAR.OL",
         ]
     )
     use_dcf_views: bool = True

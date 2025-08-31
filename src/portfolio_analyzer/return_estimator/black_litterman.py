@@ -13,7 +13,7 @@ class BlackLitterman(ReturnEstimator):
         view_vector: pd.Series,
         start_date: str,
         end_date: str,
-        tickers: str,
+        tickers: list[str],
         assets_in_view: pd.DataFrame | None = None,
         view_confidence: pd.DataFrame | None = None,
         config: AppConfig = None,
@@ -66,8 +66,6 @@ class BlackLitterman(ReturnEstimator):
         if market_cap is None or market_cap.empty:
             raise ValueError("Market cap weights cannot be None or empty.")
         market_cap_weights = market_cap / market_cap.sum()
-        if market_cap_weights is None or market_cap_weights.empty:
-            raise ValueError("Market cap weights cannot be None or empty.")
 
         return market_cap_weights.reindex(tickers).fillna(0.0)
 

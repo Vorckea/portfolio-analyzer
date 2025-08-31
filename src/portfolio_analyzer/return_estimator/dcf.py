@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -12,7 +11,7 @@ from .base import ReturnEstimator
 class DCF(ReturnEstimator):
     def __init__(
         self,
-        tickers: List[str],
+        tickers: list[str],
         risk_free_rate: float,
         repository: Repository,  # Injected
         config: AppConfig,  # Injected
