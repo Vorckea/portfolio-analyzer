@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Callable
-from typing import Any, TypeVar, Hashable
+from typing import Any, Hashable, TypeVar
 
 import pandas as pd
 
