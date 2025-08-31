@@ -5,10 +5,15 @@ import pandas as pd
 from scipy.optimize import minimize
 
 from ..config.config import AppConfig
-from ..core.objectives import NegativeSharpeRatio, VolatilityObjective
+
+# ...existing code...
 from ..core.utils import portfolio_return
 from ..data.models import PortfolioResult
 from ..utils.exceptions import OptimizationError
+from ..core.objectives import (
+    make_negative_sharpe,
+    make_volatility_objective,
+)
 
 OPTIMIZATION_METHOD = "SLSQP"
 
@@ -91,7 +96,7 @@ class EfficientFrontierAnalyzer:
 
         frontier_portfolios: list[dict] = []
         # objective uses covariance matrix values directly for the volatility minimization
-        objective = VolatilityObjective(self.cov_matrix.values)
+        objective = make_volatility_objective(self.cov_matrix.values)
 
         for target in target_log_returns:
             constraints = (self._sum_to_one_constraint(), self._return_target_constraint(target))
@@ -122,7 +127,7 @@ class EfficientFrontierAnalyzer:
     def _find_minimum_volatility(self, bounds, initial_weights) -> PortfolioResult:
         constraints = self._sum_to_one_constraint()
         opt = self._optimize_portfolio(
-            objective=VolatilityObjective(self.cov_matrix.values),
+            objective=make_volatility_objective(self.cov_matrix.values),
             initial_weights=initial_weights,
             bounds=bounds,
             constraints=constraints,
@@ -135,7 +140,7 @@ class EfficientFrontierAnalyzer:
     def _find_max_sharpe(self, bounds, initial_weights) -> PortfolioResult:
         constraints = self._sum_to_one_constraint()
         opt = self._optimize_portfolio(
-            objective=NegativeSharpeRatio(
+            objective=make_negative_sharpe(
                 self.mean_returns.values,
                 self.cov_matrix.values,
                 self.config.risk_free_rate,

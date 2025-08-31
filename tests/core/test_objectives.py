@@ -20,7 +20,7 @@ class TestPortfolioObjectives(unittest.TestCase):
         self.weights = np.array([0.4, 0.4, 0.2])
 
     def test_negative_sharpe_ratio(self):
-        objective = objectives.NegativeSharpeRatio(
+        objective = objectives.make_negative_sharpe(
             self.mean_returns, self.cov_matrix, self.risk_free_rate, self.lambda_reg
         )
         result = objective(self.weights)
@@ -29,21 +29,21 @@ class TestPortfolioObjectives(unittest.TestCase):
 
     def test_negative_sharpe_ratio_with_zero_weights(self):
         zero_weights = np.array([0.0, 0.0, 0.0])
-        objective = objectives.NegativeSharpeRatio(
+        objective = objectives.make_negative_sharpe(
             self.mean_returns, self.cov_matrix, self.risk_free_rate, self.lambda_reg
         )
         with self.assertRaises(objectives.OptimizationError):
             objective(zero_weights)
 
     def test_volatility_objective(self):
-        objective = objectives.VolatilityObjective(self.cov_matrix)
+        objective = objectives.make_volatility_objective(self.cov_matrix)
         result = objective(self.weights)
         self.assertIsInstance(result, float)
         self.assertGreaterEqual(result, 0)
 
     def test_volatility_objective_with_zero_weights(self):
         zero_weights = np.array([0.0, 0.0, 0.0])
-        objective = objectives.VolatilityObjective(self.cov_matrix)
+        objective = objectives.make_volatility_objective(self.cov_matrix)
         with self.assertRaises(objectives.OptimizationError):
             objective(zero_weights)
 

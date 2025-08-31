@@ -16,7 +16,7 @@ from ..core.utils import (
 )
 from ..data.models import PortfolioResult
 from ..utils.exceptions import InputAlignmentError, OptimizationError
-from .objectives import PortfolioObjective
+from .objectives import ObjectiveCallable
 
 OPTIMIZATION_METHOD = "SLSQP"
 
@@ -29,7 +29,7 @@ class PortfolioOptimizer:
         mean_returns: pd.Series,
         cov_matrix: pd.DataFrame,
         config: AppConfig,
-        objective: PortfolioObjective,
+        objective: ObjectiveCallable,
     ):
         """Initialize the PortfolioOptimizer.
 
