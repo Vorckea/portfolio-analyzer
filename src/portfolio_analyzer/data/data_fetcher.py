@@ -1,13 +1,14 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from collections.abc import Sequence
+from typing import Any
 
 import pandas as pd
 
 
 class MarketDataProvider(ABC):
     @abstractmethod
-    def download(self, tickers: List[str], start: str, end: str, **kwargs) -> pd.DataFrame:
+    def download(self, tickers: list[str], start: str, end: str, **kwargs) -> pd.DataFrame:
         pass
 
     @abstractmethod
@@ -34,11 +35,11 @@ class DataFetcher:
         self.provider: MarketDataProvider = provider
         self.logger: logging.Logger = logger or logging.getLogger(__name__)
 
-    def fetch_price_data(self, tickers: List[str], start_date: str, end_date: str) -> pd.DataFrame:
+    def fetch_price_data(self, tickers: list[str], start_date: str, end_date: str) -> pd.DataFrame:
         """Fetch historical price data for the given tickers within the specified date range.
 
         Args:
-            tickers (List[str]): List of ticker symbols to fetch data for.
+            tickers (list[str]): List of ticker symbols to fetch data for.
             start_date (str): Start date for fetching historical data in 'YYYY-MM-DD' format.
             end_date (str): End date for fetching historical data in 'YYYY-MM-DD' format.
 
@@ -50,55 +51,80 @@ class DataFetcher:
             dates as index.
 
         """
-        if tickers is None or not tickers:
-            self._log_error("No tickers provided for fetching price data.")
+        if not tickers:
+            self.logger.error("No tickers provided for fetching price data.")
             raise ValueError("No tickers provided for fetching price data.")
 
-        self._log_info(f"Fetching historical price data for {len(tickers)} tickers...")
-        data: pd.DataFrame = self.provider.download(
-            tickers, start=start_date, end=end_date, progress=False, auto_adjust=True
-        )
-        if data.empty:
-            self._log_error(
+        self.logger.info("Fetching historical price data for %d tickers...", len(tickers))
+        try:
+            raw = self.provider.download(
+                tickers=tickers,
+                start=start_date,
+                end=end_date,
+                progress=False,
+                auto_adjust=True,
+            )
+        except Exception:
+            self.logger.exception(
+                "Provider.download failed for tickers=%s start=%s end=%s",
+                tickers,
+                start_date,
+                end_date,
+            )
+            raise
+
+        if raw is None or raw.empty:
+            self.logger.error(
                 "No price data fetched for any tickers. Provider returned an empty DataFrame."
             )
             raise ValueError("No price data fetched for any tickers.")
 
-        return (
-            self._extract_close_prices(data)
-            .dropna(axis=1, how="all")
-            .pipe(lambda df: (self._warn_missing_tickers(tickers, df.columns), df)[1])
-            .ffill()
-        )
+        try:
+            close = self._extract_close_prices(raw)
+        except Exception:
+            self.logger.exception("Failed to extract close prices from raw data.")
+            raise
+
+        # drop columns with all-NaN and warn about missing tickers
+        close = close.dropna(axis=1, how="all")
+        self._warn_missing_tickers(tickers, close.columns)
+
+        # forward-fill to handle occasional missing values
+        return close.ffill()
 
     def fetch_market_caps(self, tickers: list[str]) -> pd.Series:
         """Fetch market capitalization data for the given tickers.
 
         Args:
-            tickers (List[str]): List of ticker symbols to fetch market cap for.
+            tickers (list[str]): List of ticker symbols to fetch market cap for.
 
         Returns:
             pd.Series: Series containing market cap values indexed by ticker symbols.
 
         """
-        self._log_info(f"Fetching market cap data for {len(tickers)} tickers...")
+        if not tickers:
+            self.logger.error("No tickers provided for fetching market caps.")
+            raise ValueError("No tickers provided for fetching market caps.")
 
-        def get_cap(ticker) -> float:
+        self.logger.info("Fetching market cap data for %d tickers...", len(tickers))
+
+        def _get_cap(ticker: str) -> float:
             try:
-                info = getattr(self.provider.Ticker(ticker), "info", {})
-                m_cap = info.get("marketCap")
-                if m_cap is None:
-                    self._log_warning(f"Market cap not available for {ticker}. Defaulting to 0.")
-                return m_cap if m_cap is not None else 0
-            except Exception as e:
-                self._log_error(
-                    f"Failed to fetch market cap for {ticker} due to an error: {e}. Defaulting to 0."
-                )
-                return 0
+                t = self.provider.Ticker(ticker)
+                info = getattr(t, "info", {}) or {}
+                cap = info.get("marketCap")
+                if cap is None:
+                    self.logger.warning("Market cap not available for %s. Defaulting to 0.", ticker)
+                    return 0.0
+                return float(cap)
+            except Exception:
+                self.logger.exception("Failed to fetch market cap for %s. Defaulting to 0.", ticker)
+                return 0.0
 
-        return pd.Series([get_cap(ticker) for ticker in tickers], index=tickers)
+        caps = [_get_cap(ticker) for ticker in tickers]
+        return pd.Series(caps, index=tickers, dtype=float)
 
-    def fetch_ticker_info(self, ticker: str) -> Dict:
+    def fetch_ticker_info(self, ticker: str) -> dict:
         """Fetch detailed information for a specific ticker symbol.
 
         Args:
@@ -109,10 +135,15 @@ class DataFetcher:
             sector, industry, and other relevant data.
 
         """
+        if not ticker:
+            self.logger.error("fetch_ticker_info called with empty ticker.")
+            raise ValueError("Ticker must be a non-empty string.")
+
         try:
-            return getattr(self.provider.Ticker(ticker), "info", {})
-        except Exception as e:
-            self._log_error(f"Failed to fetch info for {ticker}: {e}")
+            info = getattr(self.provider.Ticker(ticker), "info", {}) or {}
+            return dict(info)
+        except Exception:
+            self.logger.exception("Failed to fetch info for %s", ticker)
             return {}
 
     def fetch_cashflow(self, ticker: str):
@@ -125,31 +156,38 @@ class DataFetcher:
             pd.DataFrame or None: Cash flow statement as a DataFrame or None if not available.
 
         """
+        if not ticker:
+            self.logger.error("fetch_cashflow called with empty ticker.")
+            raise ValueError("Ticker must be a non-empty string.")
+
         try:
             return getattr(self.provider.Ticker(ticker), "cashflow", None)
-        except Exception as e:
-            self._log_error(f"Failed to fetch cashflow for {ticker}: {e}")
+        except Exception:
+            self.logger.exception("Failed to fetch cashflow for %s", ticker)
             return None
 
     def _extract_close_prices(self, data: pd.DataFrame) -> pd.DataFrame:
         if isinstance(data.columns, pd.MultiIndex):
-            return data["Close"]
-        elif "Close" in data.columns:
+            if "Close" in data.columns.levels[0]:
+                try:
+                    return data["Close"]
+                except KeyError:
+                    # defensive: try cross-section
+                    return data.xs("Close", axis=1, level=0)
+            raise ValueError("No 'Close' level found in MultiIndex price data.")
+        # Single-level
+        if "Close" in data.columns:
+            # return a DataFrame of closes (keeps consistent shape)
             return data[["Close"]]
         raise ValueError("No 'Close' column found in price data.")
 
-    def _warn_missing_tickers(self, requested: List[str], received) -> None:
-        if missing := set(requested) - set(received):
-            self.logger.warning(f"Failed to fetch price data for: {', '.join(missing)}")
-
-    def _log_info(self, msg: str) -> None:
-        if self.logger:
-            self.logger.info(msg)
-
-    def _log_warning(self, msg: str) -> None:
-        if self.logger:
-            self.logger.warning(msg)
-
-    def _log_error(self, msg: str) -> None:
-        if self.logger:
-            self.logger.error(msg)
+    def _warn_missing_tickers(self, requested: Sequence[str], received) -> None:
+        """Log tickers that were requested but not returned by the provider."""
+        try:
+            received_set = set(received)
+        except Exception:
+            # defensive fallback
+            return
+        missing = set(requested) - received_set
+        if missing:
+            self.logger.warning("Failed to fetch price data for: %s", ", ".join(sorted(missing)))
