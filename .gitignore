@@ -25,3 +25,6 @@ poetry.lock
 # Logs
 *.log
 logs/
+
+# Cov report
+.coverage
