@@ -16,7 +16,7 @@ from ..core.utils import (
 )
 from ..data.models import PortfolioResult
 from ..utils.exceptions import InputAlignmentError, OptimizationError
-from .objectives import ObjectiveCallable
+from .types import ObjectiveProtocol
 
 OPTIMIZATION_METHOD = "SLSQP"
 
@@ -29,7 +29,7 @@ class PortfolioOptimizer:
         mean_returns: pd.Series,
         cov_matrix: pd.DataFrame,
         config: AppConfig,
-        objective: ObjectiveCallable,
+        objective: ObjectiveProtocol,
     ):
         """Initialize the PortfolioOptimizer.
 
@@ -55,6 +55,7 @@ class PortfolioOptimizer:
         self.cov_matrix = cov_matrix
         self.tickers = list(mean_returns.index)
         self.config = config
+        # Expect an ObjectiveProtocol; convert to a weights-only callable when used
         self.objective = objective
 
     def optimize(self) -> PortfolioResult | None:
@@ -82,7 +83,7 @@ class PortfolioOptimizer:
         initial_weights = np.array([1.0 / num_asset] * num_asset)
 
         opt_result = minimize(
-            self.objective,
+            self.objective.to_callable(),
             initial_weights,
             method=OPTIMIZATION_METHOD,
             bounds=bounds,

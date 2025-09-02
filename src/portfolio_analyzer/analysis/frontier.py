@@ -14,6 +14,7 @@ from ..core.objectives import (
     make_negative_sharpe,
     make_volatility_objective,
 )
+from ..core.types import ObjectiveProtocol
 
 OPTIMIZATION_METHOD = "SLSQP"
 
@@ -49,7 +50,8 @@ class EfficientFrontierAnalyzer:
             raise OptimizationError("Could not find the minimum volatility portfolio.")
         if not max_sharpe_result or not max_sharpe_result.success:
             self.logger.error(
-                f"Maximum Sharpe ratio optimization failed: {getattr(max_sharpe_result, 'message', None)}"
+                "Maximum Sharpe ratio optimization failed: %s",
+                getattr(max_sharpe_result, "message", None),
             )
             raise OptimizationError("Could not find the maximum Sharpe ratio portfolio.")
 
@@ -93,7 +95,6 @@ class EfficientFrontierAnalyzer:
         initial_weights,
     ) -> pd.DataFrame:
         target_log_returns = np.linspace(min_return, max_return, num_points)
-
         frontier_portfolios: list[dict] = []
         # objective uses covariance matrix values directly for the volatility minimization
         objective = make_volatility_objective(self.cov_matrix.values)
@@ -172,9 +173,10 @@ class EfficientFrontierAnalyzer:
         )
 
     @staticmethod
-    def _optimize_portfolio(objective, initial_weights, bounds, constraints):
+    def _optimize_portfolio(objective: ObjectiveProtocol, initial_weights, bounds, constraints):
+        # ObjectiveProtocol adapters expose to_callable() to get the weights-only callable
         return minimize(
-            objective,
+            objective.to_callable(),
             initial_weights,
             method=OPTIMIZATION_METHOD,
             bounds=bounds,

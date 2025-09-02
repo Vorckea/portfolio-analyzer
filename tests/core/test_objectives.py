@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 
 from portfolio_analyzer.core import objectives
+from portfolio_analyzer.utils.exceptions import OptimizationError
 
 
 class TestPortfolioObjectives(unittest.TestCase):
@@ -32,7 +33,7 @@ class TestPortfolioObjectives(unittest.TestCase):
         objective = objectives.make_negative_sharpe(
             self.mean_returns, self.cov_matrix, self.risk_free_rate, self.lambda_reg
         )
-        with self.assertRaises(objectives.OptimizationError):
+        with self.assertRaises(OptimizationError):
             objective(zero_weights)
 
     def test_volatility_objective(self):
@@ -44,7 +45,7 @@ class TestPortfolioObjectives(unittest.TestCase):
     def test_volatility_objective_with_zero_weights(self):
         zero_weights = np.array([0.0, 0.0, 0.0])
         objective = objectives.make_volatility_objective(self.cov_matrix)
-        with self.assertRaises(objectives.OptimizationError):
+        with self.assertRaises(OptimizationError):
             objective(zero_weights)
 
 
