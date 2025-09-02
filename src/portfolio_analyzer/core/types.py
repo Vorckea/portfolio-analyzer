@@ -7,7 +7,8 @@ reporting during adaptation.
 
 from __future__ import annotations
 
-from typing import Callable, Optional, Protocol
+from collections.abc import Callable
+from typing import Protocol
 
 import numpy as np
 
@@ -29,5 +30,5 @@ class ObjectiveProtocol(Protocol):
     def to_callable(self) -> Callable[[np.ndarray], float]:
         """Return a weights-only callable that accepts a numpy array of weights."""
 
-    def gradient(self) -> Optional[Callable[[np.ndarray], np.ndarray]]:
+    def gradient(self) -> Callable[[np.ndarray], np.ndarray] | None:
         """Optionally return a gradient callable or None if not available."""

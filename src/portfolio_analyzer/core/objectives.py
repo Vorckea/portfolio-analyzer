@@ -84,7 +84,6 @@ def make_volatility_objective(
     cov_matrix: npt.NDArray[np.float64] | pd.DataFrame,
 ) -> ObjectiveProtocol:
     """Create a weights-only volatility objective from a covariance matrix."""
-
     cov_arr = np.asarray(cov_matrix, dtype=np.float64)
 
     def _objective(weights: npt.NDArray[np.float64]) -> float:
@@ -129,7 +128,7 @@ class NegativeSharpeObjective:
 
         return _objective
 
-    def gradient(self) -> None:
+    def gradient(self) -> Callable[[np.ndarray], np.ndarray] | None:
         return None
 
     def __call__(self, weights: npt.NDArray[np.float64]) -> float:
@@ -150,7 +149,7 @@ class VolatilityObjective:
 
         return _objective
 
-    def gradient(self) -> None:
+    def gradient(self) -> Callable[[np.ndarray], np.ndarray] | None:
         return None
 
     def __call__(self, weights: npt.NDArray[np.float64]) -> float:
