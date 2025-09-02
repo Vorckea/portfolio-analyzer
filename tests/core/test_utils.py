@@ -19,6 +19,6 @@ def test_sharpe_ratio_infinite_on_zero_vol():
     weights = np.array([1.0, 0.0])
     mean_returns = np.array([0.05, 0.0])
     cov = np.zeros((2, 2))
-    # when volatility is zero and return after log > risk_free, should be +inf
+    # when volatility is zero and return is greater than risk_free, should be +inf
     sr = utils.sharpe_ratio(weights, mean_returns, cov, risk_free_rate=0.0)
     assert np.isposinf(sr)
