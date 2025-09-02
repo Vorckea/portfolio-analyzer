@@ -63,9 +63,6 @@ def make_negative_sharpe(
     mean_arr = np.asarray(mean_returns, dtype=np.float64)
     cov_arr = np.asarray(cov_matrix, dtype=np.float64)
 
-    def _objective(weights: npt.NDArray[np.float64]) -> float:
-        return negative_sharpe_ratio(weights, mean_arr, cov_arr, risk_free_rate, lambda_reg)
-
     return NegativeSharpeObjective(mean_arr, cov_arr, risk_free_rate, lambda_reg)
 
 
@@ -85,9 +82,6 @@ def make_volatility_objective(
 ) -> ObjectiveProtocol:
     """Create a weights-only volatility objective from a covariance matrix."""
     cov_arr = np.asarray(cov_matrix, dtype=np.float64)
-
-    def _objective(weights: npt.NDArray[np.float64]) -> float:
-        return volatility_objective(weights, cov_arr)
 
     return VolatilityObjective(cov_arr)
 
