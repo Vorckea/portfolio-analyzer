@@ -86,8 +86,8 @@ def make_volatility_objective(
     return VolatilityObjective(cov_arr)
 
 
-# Legacy wrapper classes removed in favor of ObjectiveProtocol adapter.
-# If you need an object with state, implement ObjectiveProtocol directly.
+# Legacy wrapper classes removed; now use direct ObjectiveProtocol implementations.
+# If you need an object with state, implement ObjectiveProtocol directly as shown below.
 
 
 # ---------------------------------------------------------------------------
