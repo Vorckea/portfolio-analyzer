@@ -1,3 +1,10 @@
+"""Objective factories and adapters used by the optimizer.
+
+This module exposes pure, functional objective factories (weights-only
+callables) and a small adapter to convert those callables to the
+`ObjectiveProtocol` used by the refactored optimizer.
+"""
+
 from collections.abc import Callable
 
 import numpy as np
@@ -5,6 +12,7 @@ import numpy.typing as npt
 import pandas as pd
 
 from ..utils.exceptions import OptimizationError
+from .types import ObjectiveProtocol
 
 # A pluggable objective is any callable that takes a weights array and returns a float.
 ObjectiveCallable = Callable[[npt.NDArray[np.float64]], float]
@@ -46,7 +54,7 @@ def make_negative_sharpe(
     cov_matrix: npt.NDArray[np.float64] | pd.DataFrame,
     risk_free_rate: float,
     lambda_reg: float,
-) -> ObjectiveCallable:
+) -> ObjectiveProtocol:
     """Produce a weights-only callable (pure) capturing the data by value.
 
     The returned callable is safe to pass to optimizers and does not mutate
@@ -58,7 +66,7 @@ def make_negative_sharpe(
     def _objective(weights: npt.NDArray[np.float64]) -> float:
         return negative_sharpe_ratio(weights, mean_arr, cov_arr, risk_free_rate, lambda_reg)
 
-    return _objective
+    return NegativeSharpeObjective(mean_arr, cov_arr, risk_free_rate, lambda_reg)
 
 
 def volatility_objective(
@@ -74,51 +82,34 @@ def volatility_objective(
 
 def make_volatility_objective(
     cov_matrix: npt.NDArray[np.float64] | pd.DataFrame,
-) -> ObjectiveCallable:
-    """Create a weights-only volatility objective from a covariance matrix.
-
-    Parameters
-    ----------
-    cov_matrix
-        Covariance matrix (array-like or DataFrame).
-
-    Returns
-    -------
-    ObjectiveCallable
-        Callable that accepts a weights array and returns the portfolio volatility.
-    """
+) -> ObjectiveProtocol:
+    """Create a weights-only volatility objective from a covariance matrix."""
 
     cov_arr = np.asarray(cov_matrix, dtype=np.float64)
 
     def _objective(weights: npt.NDArray[np.float64]) -> float:
-        """Weights-only wrapper for `volatility_objective`."""
-
         return volatility_objective(weights, cov_arr)
 
-    return _objective
+    return VolatilityObjective(cov_arr)
 
 
-# Backwards-compatible thin wrappers (keeps existing API that expects objects)
+# Legacy wrapper classes removed in favor of ObjectiveProtocol adapter.
+# If you need an object with state, implement ObjectiveProtocol directly.
 
 
-class PortfolioObjective:
-    """Compatibility class: instances behave like callables but delegate to pure functions."""
-
-    def __call__(
-        self, weights: npt.NDArray[np.float64]
-    ) -> float:  # pragma: no cover - abstract compatibility
-        """Abstract call signature for compatibility with previous API."""
-
-        raise NotImplementedError()
+# ---------------------------------------------------------------------------
+# Concrete Objective implementations (new canonical API)
+# ---------------------------------------------------------------------------
 
 
-class NegativeSharpeRatio(PortfolioObjective):
-    """Callable object implementing the negative Sharpe ratio objective.
+class NegativeSharpeObjective:
+    """ObjectiveProtocol implementation for the negative Sharpe ratio.
 
-    This is a thin wrapper around the pure `make_negative_sharpe` factory and
-    exists for backwards compatibility with code that constructs objective
-    instances.
+    This object stores the data by value (numpy arrays) and exposes
+    `to_callable()` and `__call__` for optimizer compatibility.
     """
+
+    name = "negative_sharpe"
 
     def __init__(
         self,
@@ -127,25 +118,40 @@ class NegativeSharpeRatio(PortfolioObjective):
         risk_free_rate: float,
         lambda_reg: float,
     ) -> None:
-        """Create the callable by capturing copies of the inputs."""
+        self._mean = np.asarray(mean_returns, dtype=np.float64)
+        self._cov = np.asarray(cov_matrix, dtype=np.float64)
+        self._rfr = float(risk_free_rate)
+        self._lambda = float(lambda_reg)
 
-        self._fn = make_negative_sharpe(mean_returns, cov_matrix, risk_free_rate, lambda_reg)
+    def to_callable(self) -> ObjectiveCallable:
+        def _objective(weights: npt.NDArray[np.float64]) -> float:
+            return negative_sharpe_ratio(weights, self._mean, self._cov, self._rfr, self._lambda)
+
+        return _objective
+
+    def gradient(self) -> None:
+        return None
 
     def __call__(self, weights: npt.NDArray[np.float64]) -> float:
-        """Evaluate the objective for the provided weights."""
-
-        return self._fn(weights)
+        return self.to_callable()(weights)
 
 
-class VolatilityObjective(PortfolioObjective):
-    """Callable object implementing the volatility-only objective (sqrt(w' C w))."""
+class VolatilityObjective:
+    """ObjectiveProtocol implementation for portfolio volatility (sqrt(w' C w))."""
+
+    name = "volatility"
 
     def __init__(self, cov_matrix: npt.NDArray[np.float64] | pd.DataFrame) -> None:
-        """Capture the covariance matrix and produce a weights-only callable."""
+        self._cov = np.asarray(cov_matrix, dtype=np.float64)
 
-        self._fn = make_volatility_objective(cov_matrix)
+    def to_callable(self) -> ObjectiveCallable:
+        def _objective(weights: npt.NDArray[np.float64]) -> float:
+            return volatility_objective(weights, self._cov)
+
+        return _objective
+
+    def gradient(self) -> None:
+        return None
 
     def __call__(self, weights: npt.NDArray[np.float64]) -> float:
-        """Evaluate the volatility objective for the provided weights."""
-
-        return self._fn(weights)
+        return self.to_callable()(weights)
