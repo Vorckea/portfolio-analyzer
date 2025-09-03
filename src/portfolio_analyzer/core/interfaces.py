@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 import pandas as pd
 
@@ -20,8 +21,8 @@ class BaseDataSource(ABC):
     def fetch_price_history(
         self,
         asset_list: list[str],
-        start,
-        end,
+        start: datetime,
+        end: datetime,
         frequency: str,
     ) -> pd.DataFrame:
         raise NotImplementedError

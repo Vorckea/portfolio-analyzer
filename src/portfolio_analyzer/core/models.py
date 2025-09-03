@@ -18,6 +18,8 @@ class PortfolioResult(BaseModel):
 
 
 class PriceHistory(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)  # Needed for pd.DataFrame
+
     prices: pd.DataFrame
     start_date: pd.Timestamp
     end_date: pd.Timestamp
