@@ -54,7 +54,7 @@ class YahooFinanceDataProvider(BaseDataProvider):
                 if cols:
                     res = frame.loc[:, cols]
                     # normalize column names to ticker symbols where possible
-                    if isinstance(cols[0], tuple):
+                    if cols and isinstance(cols[0], tuple):
                         res.columns = [c[1] if c[1] not in (None, "") else c[0] for c in cols]
                     return res
 
