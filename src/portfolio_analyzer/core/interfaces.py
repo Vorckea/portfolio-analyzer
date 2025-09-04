@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from .models import PortfolioResult, PortfolioSpec, PriceHistory
+from .models import PortfolioResult, PortfolioSpec, PriceHistory, SymbolInfo
 
 
 class BaseReturnEstimator(ABC):
@@ -28,7 +28,7 @@ class BaseDataProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def fetch_symbol_info(self, symbol: str) -> dict:
+    def fetch_symbol_info(self, symbol: str) -> SymbolInfo:
         raise NotImplementedError
 
     @abstractmethod
