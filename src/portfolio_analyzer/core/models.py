@@ -22,7 +22,7 @@ class PriceHistory(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # Needed for pd.DataFrame
 
     prices: pd.DataFrame
-    volume: pd.DataFrame
+    volume: pd.DataFrame | None
     start_date: datetime
     end_date: datetime
     frequency: str
