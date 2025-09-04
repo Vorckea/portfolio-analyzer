@@ -51,7 +51,6 @@ class SymbolInfo(BaseModel):
     trailing_eps: float = Field(alias="epsTrailingTwelveMonths")
     forward_eps: float = Field(alias="epsForward")
     market_cap: int = Field(alias="marketCap")
-    short_ratio: float = Field(alias="shortRatio")
     fifty_two_week_high: float = Field(alias="fiftyTwoWeekHigh")
     fifty_two_week_low: float = Field(alias="fiftyTwoWeekLow")
     fifty_day_average: float = Field(alias="fiftyDayAverage")
