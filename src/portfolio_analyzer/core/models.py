@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 import pandas as pd
@@ -21,8 +22,9 @@ class PriceHistory(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # Needed for pd.DataFrame
 
     prices: pd.DataFrame
-    start_date: pd.Timestamp
-    end_date: pd.Timestamp
+    volume: pd.DataFrame | None
+    start_date: datetime
+    end_date: datetime
     frequency: str
 
     @property

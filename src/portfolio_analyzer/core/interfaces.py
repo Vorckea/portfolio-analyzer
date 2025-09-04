@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from .models import PortfolioResult, PortfolioSpec
+from .models import PortfolioResult, PortfolioSpec, PriceHistory
 
 
 class BaseReturnEstimator(ABC):
@@ -16,7 +16,7 @@ class BaseReturnEstimator(ABC):
         raise NotImplementedError
 
 
-class BaseDataSource(ABC):
+class BaseDataProvider(ABC):
     @abstractmethod
     def fetch_price_history(
         self,
@@ -24,7 +24,7 @@ class BaseDataSource(ABC):
         start: datetime,
         end: datetime,
         frequency: str,
-    ) -> pd.DataFrame:
+    ) -> PriceHistory:
         raise NotImplementedError
 
     @abstractmethod
@@ -32,7 +32,7 @@ class BaseDataSource(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def fetch_cashflow(self, symbol: str, frequency: str) -> pd.DataFrame:
+    def fetch_cashflow(self, symbol: str) -> pd.Series | None:
         raise NotImplementedError
 
     @abstractmethod

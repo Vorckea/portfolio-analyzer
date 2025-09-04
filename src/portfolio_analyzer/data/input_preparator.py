@@ -9,7 +9,7 @@ final inputs (mean returns, covariance) for the optimizer.
 import logging
 
 from ..config.config import AppConfig
-from ..return_estimator.base import ReturnEstimator
+from ..estimators.base import ReturnEstimator
 from ..utils.util import calculate_annualized_covariance, calculate_log_returns
 from .new_models import AssetUniverse, ModelInputs, PriceData, ReturnEstimates
 from .repository import Repository
