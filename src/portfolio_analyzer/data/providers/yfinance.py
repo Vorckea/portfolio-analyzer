@@ -4,7 +4,7 @@ import pandas as pd
 import yfinance as yf
 
 from ...core.interfaces import BaseDataProvider
-from ...core.models import PriceHistory
+from ...core.models import PriceHistory, SymbolInfo
 
 
 class YahooFinanceDataProvider(BaseDataProvider):
@@ -75,11 +75,11 @@ class YahooFinanceDataProvider(BaseDataProvider):
             frequency=frequency,
         )
 
-    def fetch_symbol_info(self, symbol: str) -> dict:
+    def fetch_symbol_info(self, symbol: str) -> SymbolInfo:
         info = yf.Ticker(symbol).info
         if not info:
-            return {}
-        return info
+            return SymbolInfo(**{})
+        return SymbolInfo(**info)
 
     def fetch_cashflow(self, symbol: str) -> pd.Series | None:
         cashflow_df = yf.Ticker(symbol).cashflow
