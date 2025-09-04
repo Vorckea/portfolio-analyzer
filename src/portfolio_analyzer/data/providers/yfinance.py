@@ -86,7 +86,10 @@ class YahooFinanceDataProvider(BaseDataProvider):
         if cashflow_df.empty:
             return None
 
-        cashflow = cashflow_df.get("Free Cash Flow")
+        try:
+            cashflow = cashflow_df.loc["Free Cash Flow"]
+        except KeyError:
+            return None
         if cashflow.empty:
             return None
 
