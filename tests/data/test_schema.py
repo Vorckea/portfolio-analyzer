@@ -93,9 +93,10 @@ def test_pricehistory_pydantic_model_validation():
 
     bad_prices = prices.copy()
     bad_prices.index.name = "NotDatetime"
-    # Depending on the validation order the Annotated validator may raise a
-    # pandera.SchemaError directly or pydantic may wrap it into a
-    # pydantic.ValidationError. Accept either.
+    # Note: If the DataFrame index name is incorrect, validation may fail at different stages.
+    # - If pandera's schema validation runs first, a pandera.SchemaError is raised directly.
+    # - If pydantic's Annotated validator wraps the error, a pydantic.ValidationError is raised.
+    # This test accepts either error type to accommodate the current (library-dependent) validation order.
     with pytest.raises((ValidationError, pe.SchemaError)):
         PriceHistory(
             prices=bad_prices,
