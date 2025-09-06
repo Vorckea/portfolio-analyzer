@@ -4,7 +4,7 @@ import pandas as pd
 import yfinance as yf
 
 from ...core.interfaces import BaseDataProvider
-from ...core.models import PriceHistory, SymbolInfo
+from ..schema import PriceHistory, SymbolInfo
 
 
 class YahooFinanceDataProvider(BaseDataProvider):
