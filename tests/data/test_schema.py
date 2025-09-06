@@ -1,21 +1,8 @@
-import pandas as pd
-import pytest
-from datetime import datetime
-
-"""Tests for the data schema validators and PriceHistory model.
-
-These exercises validate that the pandera schemas accept valid
-price/volume DataFrames and reject invalid ones. They also check that the
-PriceHistory pydantic model enforces the same validations when used as an
-Annotated type.
-"""
-
 from datetime import datetime
 
 import pandas as pd
-import pytest
-
 import pandera.errors as pe
+import pytest
 from pydantic import ValidationError
 
 from portfolio_analyzer.data.schema import (
