@@ -83,9 +83,7 @@ VOLUME_HISTORY_SCHEMA = pa.DataFrameSchema(
                         error="Volume values must be non-negative",
                     ),
                     pa.Check(
-                        lambda s: (
-                            lambda float_values: (float_values.round(0) == float_values).all()
-                        )(s.apply(float)),
+                        lambda s: (s.astype(float).round(0) == s.astype(float)).all(),
                         element_wise=False,
                         error="Volume values should be integral",
                     ),
