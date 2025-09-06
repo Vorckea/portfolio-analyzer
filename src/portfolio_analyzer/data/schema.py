@@ -24,6 +24,7 @@ PRICE_HISTORY_SCHEMA = pa.DataFrameSchema(
     ),
     columns=(
         {
+            # Matching all columns with ticker-like names (e.g. AAPL, MSFT, BRK.B)
             "": pa.Column(
                 pa.Float,
                 checks=[
@@ -67,6 +68,7 @@ VOLUME_HISTORY_SCHEMA = pa.DataFrameSchema(
     ),
     columns=(
         {
+            # Matching all columns with ticker-like names (e.g. AAPL, MSFT, BRK.B)
             "": pa.Column(
                 pa.Int,
                 checks=[
