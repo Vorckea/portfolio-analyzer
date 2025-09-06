@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
 from datetime import datetime
+
 """Tests for the data schema validators and PriceHistory model.
 
 These exercises validate that the pandera schemas accept valid
