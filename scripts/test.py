@@ -1,13 +1,8 @@
-import yfinance as yf
+from portfolio_analyzer.data.providers.yfinance import YahooFinanceDataProvider
 
-from portfolio_analyzer.core.models import SymbolInfo
-
-
-def fetch_symbol_info(symbol: str) -> SymbolInfo:
-    info = yf.Ticker(symbol).info
-    if not info:
-        return SymbolInfo(**{})
-    return SymbolInfo(**info)
-
-
-print(fetch_symbol_info("AAPL"))
+provider = YahooFinanceDataProvider()
+data = provider.fetch_price_history(
+    ["AAPL", "MSFT", "GOOGL"], start="2025-01-01", end="2025-03-01", frequency="1h"
+)
+print(data.prices.head())
+print(data.volume.head())

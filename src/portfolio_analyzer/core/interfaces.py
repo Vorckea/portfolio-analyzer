@@ -3,7 +3,8 @@ from datetime import datetime
 
 import pandas as pd
 
-from .models import PortfolioResult, PortfolioSpec, PriceHistory, SymbolInfo
+from ..data.schema import PriceHistory, SymbolInfo
+from .models import PortfolioResult, PortfolioSpec, ReturnsFrame
 
 
 class BaseReturnEstimator(ABC):
@@ -12,7 +13,7 @@ class BaseReturnEstimator(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def estimate(self) -> tuple[pd.Series, pd.DataFrame]:
+    def estimate(self) -> ReturnsFrame:
         raise NotImplementedError
 
 
