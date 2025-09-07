@@ -1,8 +1,7 @@
-from datetime import datetime
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class PortfolioSpec(BaseModel):
@@ -21,10 +20,10 @@ class PortfolioResult(BaseModel):
 class ReturnsFrame(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)  # Needed for pd.DataFrame
 
-    returns: pd.DataFrame
+    returns: pd.Series
     covariance: pd.DataFrame
     frequency: str
 
     @property
     def assets(self) -> list[str]:
-        return self.returns.columns.tolist()
+        return self.returns.index.tolist()
