@@ -2,6 +2,7 @@ import re
 from datetime import datetime
 from typing import Annotated
 
+import numpy as np
 import pandas as pd
 import pandera.pandas as pa
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
@@ -121,6 +122,14 @@ class PriceHistory(BaseModel):
     @property
     def assets(self) -> list[str]:
         return self.prices.columns.tolist()
+
+    @property
+    def pct_change_returns(self) -> pd.DataFrame:
+        return self.prices.pct_change().dropna(how="all")
+
+    @property
+    def log_returns(self) -> pd.DataFrame:
+        return (self.pct_change_returns + 1).apply(np.log)
 
 
 class SymbolInfo(BaseModel):
