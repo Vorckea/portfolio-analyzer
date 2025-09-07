@@ -129,5 +129,5 @@ def test_pricehistory_pydantic_model_log_returns():
         end_date=datetime(2020, 1, 3),
         frequency="D",
     )
-    expected_log_returns = (prices.pct_change().dropna(how="all") + 1).apply(np.log)
+    expected_log_returns = (ph.pct_change_returns + 1).apply(np.log)
     pd.testing.assert_frame_equal(ph.log_returns, expected_log_returns)
