@@ -9,7 +9,7 @@ from .models import PortfolioResult, PortfolioSpec, ReturnsFrame
 
 class BaseReturnEstimator(ABC):
     @abstractmethod
-    def fit(self, prices: pd.DataFrame) -> None:
+    def fit(self, prices: PriceHistory) -> None:
         raise NotImplementedError
 
     @abstractmethod
