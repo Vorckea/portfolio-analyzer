@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import pandera.errors as pe
 import pytest
@@ -104,3 +105,29 @@ def test_pricehistory_pydantic_model_validation():
             end_date=datetime(2020, 1, 3),
             frequency="D",
         )
+
+
+def test_pricehistory_pydantic_model_pct_change_returns():
+    """Test the pct_change_returns property of PriceHistory."""
+    prices = _make_price_df()
+    ph = PriceHistory(
+        prices=prices,
+        start_date=datetime(2020, 1, 1),
+        end_date=datetime(2020, 1, 3),
+        frequency="D",
+    )
+    expected_pct_changes = prices.pct_change().dropna(how="all")
+    pd.testing.assert_frame_equal(ph.pct_change_returns, expected_pct_changes)
+
+
+def test_pricehistory_pydantic_model_log_returns():
+    """Test the log_returns property of PriceHistory."""
+    prices = _make_price_df()
+    ph = PriceHistory(
+        prices=prices,
+        start_date=datetime(2020, 1, 1),
+        end_date=datetime(2020, 1, 3),
+        frequency="D",
+    )
+    expected_log_returns = (prices.pct_change().dropna(how="all") + 1).apply(np.log)
+    pd.testing.assert_frame_equal(ph.log_returns, expected_log_returns)
